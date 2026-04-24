@@ -1,0 +1,175 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+
+class CoverPage extends StatelessWidget {
+  const CoverPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Image
+          Image.network(
+            'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
+            fit: BoxFit.cover,
+          ),
+
+          // Subtle overlay for depth
+          Container(
+            color: colorScheme.surface.withOpacity(0.30),
+          ),
+
+          // Header
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 48),
+                    Text(
+                      'MOOD',
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 6.0,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Content Overlay
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 60),
+
+                  // Tagline
+                  Text(
+                    'THE CURATED COLLECTION',
+                    style: textTheme.labelMedium?.copyWith(
+                      fontSize: 10,
+                      letterSpacing: 5.0,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.primary.withOpacity(0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Headline
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Modern\n',
+                          style: GoogleFonts.notoSerif(
+                            fontSize: 56,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: -0.02 * 56,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'Elegance',
+                          style: GoogleFonts.notoSerif(
+                            fontSize: 56,
+                            fontWeight: FontWeight.w300,
+                            fontStyle: FontStyle.italic,
+                            letterSpacing: -0.02 * 56,
+                            color: colorScheme.secondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Subtitle
+                  Text(
+                    'Refined by Design',
+                    style: GoogleFonts.notoSerif(
+                      fontSize: 20,
+                      fontWeight: FontWeight.normal,
+                      fontStyle: FontStyle.italic,
+                      color: colorScheme.primary.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Body text
+                  SizedBox(
+                    width: 320,
+                    child: Text(
+                      'Experience a minimalist approach to luxury. A sanctuary of style defined by simplicity and impeccable craftsmanship.',
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w300,
+                        height: 1.6,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // CTA Button
+                  SizedBox(
+                    width: 220,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 8,
+                        shadowColor: colorScheme.primary.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 56,
+                          vertical: 24,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                      ),
+                      child: Text(
+                        'ENTER MOOD',
+                        style: textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 3.0,
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

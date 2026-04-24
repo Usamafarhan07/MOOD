@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed-dim": "#b1ccc9",
+                    "surface-container": "#f0ede9",
+                    "surface-dim": "#dcdad5",
+                    "background": "#fcf9f4",
+                    "on-primary-container": "#d4ada1",
+                    "outline": "#827470",
+                    "secondary-fixed": "#ffdbd1",
+                    "on-tertiary-container": "#a0bab7",
+                    "inverse-surface": "#31302d",
+                    "surface-container-highest": "#e5e2dd",
+                    "on-tertiary-fixed-variant": "#334b49",
+                    "secondary": "#a04022",
+                    "primary-container": "#5d4037",
+                    "on-tertiary-fixed": "#061f1e",
+                    "on-surface": "#1c1c19",
+                    "on-error-container": "#93000a",
+                    "surface-container-lowest": "#ffffff",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#ffdbd0",
+                    "secondary-fixed-dim": "#ffb59f",
+                    "inverse-primary": "#e7bdb1",
+                    "tertiary-fixed": "#cde8e5",
+                    "on-secondary-container": "#732004",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#334b49",
+                    "on-error": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "outline-variant": "#d4c3be",
+                    "primary": "#442a22",
+                    "tertiary": "#1c3433",
+                    "inverse-on-surface": "#f3f0eb",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f6f3ee",
+                    "on-secondary-fixed": "#3a0a00",
+                    "on-primary-fixed-variant": "#5d4037",
+                    "primary-fixed-dim": "#e7bdb1",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#e5e2dd",
+                    "secondary-container": "#fe8763",
+                    "on-surface-variant": "#504441",
+                    "on-secondary-fixed-variant": "#80290c",
+                    "on-primary-fixed": "#2c160e",
+                    "surface": "#fcf9f4",
+                    "surface-bright": "#fcf9f4",
+                    "on-background": "#1c1c19",
+                    "surface-tint": "#77574d",
+                    "surface-container-high": "#ebe8e3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, .font-serif { font-family: 'Noto Serif', serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background selection:bg-secondary-container">
+<!-- TopAppBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-[#fcf9f4]/80 backdrop-blur-md dark:bg-[#2d1e19]/80">
+<div class="flex items-center">
+<button class="material-symbols-outlined text-[#442a22] dark:text-[#fcf9f4] hover:opacity-70 transition-opacity duration-300">menu</button>
+</div>
+<h1 class="font-serif font-black text-2xl tracking-[0.25em] text-[#442a22] dark:text-[#fcf9f4] uppercase">MOOD</h1>
+<div class="flex items-center">
+<button class="material-symbols-outlined text-[#442a22] dark:text-[#fcf9f4] hover:opacity-70 transition-opacity duration-300">shopping_bag</button>
+</div>
+</nav>
+<main class="pb-32 pt-24"><section class="px-6 mb-8">
+<div class="relative flex items-center bg-surface-container-low rounded-full px-6 py-3 shadow-sm">
+<span class="material-symbols-outlined text-primary text-xl mr-3">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full p-0 font-body text-primary placeholder:text-primary/50 text-sm tracking-wide" placeholder="Search products..." type="text"/>
+<button class="material-symbols-outlined text-primary text-xl ml-3 hover:opacity-70 transition-opacity">photo_camera</button></div>
+</section>
+<!-- Hero Banner -->
+<section class="px-6 mb-12">
+<div class="relative h-[500px] rounded-lg overflow-hidden flex items-end">
+<img alt="Editorial fashion photography of a model in a minimal beige trench coat standing against a warm limestone wall with soft architectural shadows" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtOnOOXGA2BDQydlnHCriYfQhXOuDXPi0asqNWUtsOsiqzq04udrkH3ks1A1LnMBCgNkcjN0LwOnDyMHeA4uVRbGMffd3N59C_ix6Gdp2nwjQHUYb03VoEX9AaR_Ci_ev0xmR2CsipxnX6I9PXOD0FNzXl6KyQkjeZCroPE6RDVI-1bZRLrhRupZx-u6feWiBpPJHrAHhDrUoaHYkXsYBufQae32TE-rg-hReKolFDH9xPRVcGh9IcYTGdC5ZUXyqk6k_8I3CLpeQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent"></div>
+<div class="relative p-8 w-full max-w-xl">
+<h2 class="text-white text-5xl font-serif font-bold leading-tight mb-4 -tracking-wider">Summer Archive</h2>
+<p class="text-white/90 text-lg mb-8 font-body max-w-md">A curated selection of timeless silhouettes for the digital modernist.</p>
+<button class="bg-gradient-to-r from-secondary to-secondary-container text-white px-10 py-4 rounded-full font-label text-sm font-bold uppercase tracking-widest hover:scale-105 transition-transform duration-300 shadow-xl shadow-secondary/20">
+                        Explore Collection
+                    </button>
+</div>
+</div>
+</section>
+<!-- Category Chips -->
+<section class="px-6 mb-12 flex gap-3 overflow-x-auto no-scrollbar">
+<button class="px-8 py-3 bg-primary text-white rounded-full font-label text-sm font-bold uppercase tracking-wider shadow-md">Women</button>
+<button class="px-8 py-3 bg-surface-container-high text-primary rounded-full font-label text-sm font-bold uppercase tracking-wider hover:bg-surface-container-highest transition-colors">Men</button>
+<button class="px-8 py-3 bg-surface-container-high text-primary rounded-full font-label text-sm font-bold uppercase tracking-wider hover:bg-surface-container-highest transition-colors">Kids</button>
+</section>
+<!-- Featured Selection -->
+<section class="px-6 mb-16">
+<div class="flex justify-between items-baseline mb-8">
+<h3 class="text-2xl font-serif font-bold text-primary">Featured Selection</h3>
+<a class="font-label text-xs font-bold uppercase tracking-widest text-secondary hover:underline" href="#">View All</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<!-- Product Card 1 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden mb-6 bg-surface-container-low transition-colors duration-500 hover:bg-surface-container-high">
+<img alt="Studio shot of a luxury camel-colored structured wool coat on a minimalist hanger against a warm ivory background with soft lighting" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNHN-xw2EVV9V-z1_pQatvYZqGsqw40CKM6zOVcE1rCKB5-hXd8_RkCGUl_0HVwDHFB1z5DXVyhuu0V0fG4_85Ml857EYH-i_P7an0mnxpU8FhbOYwR1NlmAb-l-vJLDnnpjZqVKG2Y-Hg5WPvKRYWDD8nEHWm9HwwS7tLfrzBB2KAGq2PhnbYJrt7PrTNSc2U-FrpnD73r88Iu-B3-JNeQ_0c89NuNqRc5R2z_FsX-tVSP94vL-BQwID6rZlH1A8OtV11LSjr6xo"/>
+<button class="absolute top-4 right-4 w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full text-primary hover:text-secondary transition-colors duration-300">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-xl font-serif font-bold text-primary mb-1">Structured Wool Coat</h4>
+<p class="text-on-surface-variant font-body text-sm">Heritage Camel</p>
+</div>
+<p class="text-lg font-body font-bold text-primary">LKR 9000</p>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="group cursor-pointer md:mt-12">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden mb-6 bg-surface-container-low transition-colors duration-500 hover:bg-surface-container-high">
+<img alt="Close up of a high-end black silk dress draped elegantly with dramatic side lighting showing fabric texture and sheen" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3eFsuU50HyClxMBUzmgR62Lm-jHZG-z3xkj7yA7EyEFpJcSl90XikR03rpfyNdwScwUHIDLikHLUDRbqZFZwkzVujgupyDV_5DFUmYWkI005-5M7LeQFMtsxaDyeWCHCNfD1sMYwST1IiEeFoEWmo_Zl6-F--_QN7sogAcoddt80RgIGALgpGnLBpfWJUCE8OnRnD_jp8mPbDRZQAveMHhVBGgcyP3OrIksc73HCUpzGM8R8jzSpOpfqc99Pk_QtWaSic-lkdxB0"/>
+<button class="absolute top-4 right-4 w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full text-primary hover:text-secondary transition-colors duration-300">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-xl font-serif font-bold text-primary mb-1">Noir Silk Slip</h4>
+<p class="text-on-surface-variant font-body text-sm">Midnight Onyx</p>
+</div>
+<p class="text-lg font-body font-bold text-primary">LKR 7500</p>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden mb-6 bg-surface-container-low transition-colors duration-500 hover:bg-surface-container-high">
+<img alt="A high-fashion studio product photo of a designer leather handbag in a rich dark brown, presented on a minimalist off-white background with professional lighting, luxury fashion catalog aesthetic." class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSvPUh6-En9CMsWZFhpYp5yZA91x3tvC08WkNj28QBJPfSAUPnR3zz5kgGqYn3HpOlMsavlojLUySSV-nBtBqMKDroTMCmhj2HeeXgB9rUOKKF3A8o5FNVwOOEFG21W1JiwKqrgpEzpP7ixCnlTIgkNngzOX4HF7QoCVMXNUpJ-CJIjNSWOTk_4F-7_vt7TjMWtVujPtbzN4ppikNM70OYvXZcVUEYuLNTPwveVfkpRRzFGkvt1YSTr3Jj607frcXIu-P4m69GAMw"/>
+<button class="absolute top-4 right-4 w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full text-primary hover:text-secondary transition-colors duration-300">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-xl font-serif font-bold text-primary mb-1">Noir Mini Bag</h4>
+<p class="text-on-surface-variant font-body text-sm">Midnight Onyx</p>
+</div>
+<p class="text-lg font-body font-bold text-primary">LKR 12,500</p>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="group cursor-pointer md:mt-12">
+<div class="relative aspect-[3/4] rounded-lg overflow-hidden mb-6 bg-surface-container-low transition-colors duration-500 hover:bg-surface-container-high">
+<img alt="A high-fashion studio product photo of elegant women's silk trousers in a warm neutral beige, shown flat or on a minimalist form, clean off-white background, luxury fashion catalog aesthetic." class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa7QWyyg1YDNcW2MypSJMRrw0zs-aTYyqicNeAPyj2gfLrCQNPZnQ_bZGznk75R3-pUsIORn9rYPp6-6YNAj-TE-9pcAlLIhOzQzMzcGuA9wE2tmb6el1ryXE4Az4mdokPBx7rjkTYTTmrYWFCPO6ZwbeB1vMwE4GsrXuNJGtzxo76sOgpH4xQ8qoIqMlYiFPExtu-4gkt5AhuI3IGdVZ5iYLg2ZftC0Z0_d03kALIRVrACFKmg0f_g94A8Bx1Skt0pdrrUov1aAY"/>
+<button class="absolute top-4 right-4 w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full text-primary hover:text-secondary transition-colors duration-300">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h4 class="text-xl font-serif font-bold text-primary mb-1">Silk Tapered Trousers</h4>
+<p class="text-on-surface-variant font-body text-sm">Desert Sand</p>
+</div>
+<p class="text-lg font-body font-bold text-primary">LKR 6,800</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Curator Banner -->
+<section class="px-6 mb-12">
+<div class="bg-surface-container-low rounded-lg p-12 text-center flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary text-4xl mb-6" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="text-3xl font-serif font-bold text-primary mb-4">The Digital Curator</h3>
+<p class="text-on-surface-variant max-w-md mb-8 leading-relaxed">Experience a tailored journey where AI meets high fashion editorial standards.</p>
+<a class="inline-flex items-center gap-2 font-label text-sm font-bold uppercase tracking-widest text-primary border-b-2 border-primary pb-1 hover:text-secondary hover:border-secondary transition-all" href="#">
+                    Meet your Stylist
+                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#fcf9f4]/90 backdrop-blur-2xl dark:bg-[#2d1e19]/90 rounded-t-3xl shadow-[0_-4px_30px_rgba(68,42,34,0.05)]">
+<a class="flex flex-col items-center justify-center text-[#a04022] dark:text-[#fe8763] active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-sans text-[10px] font-medium tracking-widest uppercase mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#442a22]/40 dark:text-[#fcf9f4]/40 hover:text-[#a04022] transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-sans text-[10px] font-medium tracking-widest uppercase mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#442a22]/40 dark:text-[#fcf9f4]/40 hover:text-[#a04022] transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="font-sans text-[10px] font-medium tracking-widest uppercase mt-1">Cart</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#442a22]/40 dark:text-[#fcf9f4]/40 hover:text-[#a04022] transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-sans text-[10px] font-medium tracking-widest uppercase mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

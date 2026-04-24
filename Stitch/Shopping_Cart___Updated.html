@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Your Bag - MOOD</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#fcf9f4",
+          "primary": "#442a22",
+          "secondary": "#a04022",
+          "secondary-container": "#fe8763",
+          "surface": "#fcf9f4",
+          "surface-container": "#f0ede9",
+          "surface-container-low": "#f6f3ee",
+          "surface-container-high": "#ebe8e3",
+          "on-background": "#1c1c19",
+          "on-surface-variant": "#504441",
+          "outline": "#827470"
+        },
+        "borderRadius": {
+          "DEFAULT": "1rem",
+          "lg": "2rem",
+          "xl": "3rem",
+          "full": "9999px"
+        },
+        "fontFamily": {
+          "headline": ["Noto Serif"],
+          "body": ["Manrope"],
+          "label": ["Manrope"]
+        }
+      },
+    },
+  }
+</script>
+<style>
+    body { font-family: 'Manrope', sans-serif; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4, .font-serif { font-family: 'Noto Serif', serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body class="bg-background text-on-background pb-32">
+<!-- BEGIN: MainHeader -->
+<header class="flex items-center justify-between px-6 py-6 bg-background/80 backdrop-blur-md sticky top-0 z-50" data-purpose="top-navigation">
+<!-- Menu Toggle -->
+<button aria-label="Menu" class="p-1">
+<span class="material-symbols-outlined text-primary">menu</span>
+</button>
+<!-- Logo -->
+<h1 class="text-2xl font-serif font-black tracking-[0.25em] text-primary uppercase ml-4">MOOD</h1>
+<!-- Bag Icon -->
+<button aria-label="View Cart" class="p-1"><div class="relative inline-flex">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">shopping_bag</span>
+<span class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-secondary text-[9px] font-bold text-white ring-2 ring-background">
+    2
+  </span>
+</div></button>
+</header>
+<!-- END: MainHeader -->
+<main class="max-w-md mx-auto">
+<!-- BEGIN: TitleSection -->
+<section class="px-6 pt-8 pb-4" data-purpose="page-title">
+<h2 class="text-4xl font-serif font-bold text-primary tracking-tight leading-none mb-2">Your Bag</h2>
+<p class="text-on-surface-variant font-medium text-sm">2 items selected for checkout</p>
+</section>
+<!-- END: TitleSection -->
+<!-- BEGIN: CartItemsList -->
+<section class="px-4 space-y-4" data-purpose="cart-items">
+<!-- Item 1: Sleek Leather Boot -->
+<article class="bg-surface-container-low rounded-lg p-4 flex gap-4 transition-colors duration-300 hover:bg-surface-container-high" data-purpose="cart-item">
+<div class="w-32 h-40 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Dark Brown Leather Chelsea Boot" class="w-full h-full object-cover mix-blend-multiply" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0"/>
+</div>
+<div class="flex flex-col justify-between flex-grow py-1">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-serif font-bold text-lg leading-tight text-primary">Toscana Leather Boot</h3>
+<p class="text-on-surface-variant text-sm font-body mt-1">Charcoal / Large</p>
+<p class="font-bold text-lg text-primary tabular-nums mt-1">LKR 15,000</p></div>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center bg-surface-container rounded-full px-4 py-1.5 gap-6">
+<button class="text-primary font-bold">−</button>
+<span class="font-bold text-sm text-primary">1</span>
+<button class="text-primary font-bold">+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Item 2: Wool Coat -->
+<article class="bg-surface-container-low rounded-lg p-4 flex gap-4 transition-colors duration-300 hover:bg-surface-container-high" data-purpose="cart-item">
+<div class="w-32 h-40 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img alt="Wool Coat" class="w-full h-full object-cover mix-blend-multiply" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMUsOVK5586ugPu3o1MdOGJbNUMrG5NvKdaWTjjEdhx20eErWWVa7NhS4x8noiijv70IH9zmlrX8JKbQiYu3Wxf2XXyL5g5IHsH17OvQPhNyotZ0fBtjqI5yUgNcyUaMP0MGD-PcvMVhTffW6u3ohAv06IohYSG236Fgey4RSxeGYgygJIkw3muKEKLLoomGEoPXp-lMUexu2Zd-ceS_KI6BlzDQxxeoWyvgxTIrlpHmGnRQJ93sHq6pYt8oMQrqOTMjddAy7OaSg"/>
+</div>
+<div class="flex flex-col justify-between flex-grow py-1">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-serif font-bold text-lg leading-tight text-primary">Wool Coat</h3>
+<p class="text-on-surface-variant text-sm font-body mt-1">Siren Red / 10.5</p>
+<p class="font-bold text-lg text-primary tabular-nums mt-1">LKR 9,000</p></div>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center bg-surface-container rounded-full px-4 py-1.5 gap-6">
+<button class="text-primary font-bold">−</button>
+<span class="font-bold text-sm text-primary">1</span>
+<button class="text-primary font-bold">+</button>
+</div>
+</div>
+</div>
+</article>
+</section>
+<!-- END: CartItemsList -->
+<!-- BEGIN: SummarySection -->
+<section class="mt-10 px-6" data-purpose="order-summary">
+<div class="bg-surface-container-low rounded-lg p-6 space-y-4">
+<div class="flex justify-between items-center text-on-surface-variant font-medium">
+<span>Subtotal</span>
+<span class="text-primary tabular-nums">LKR 24,000</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant font-medium">
+<span>Shipping</span>
+<span class="text-secondary font-bold">LKR 0 (Complimentary)</span>
+</div>
+<div class="pt-4 border-t border-outline/20">
+<div class="flex justify-between items-center">
+<span class="text-2xl font-serif font-bold text-primary">Total</span>
+<span class="text-2xl font-serif font-bold text-primary tabular-nums">LKR 24,000</span>
+</div>
+</div>
+</div>
+</section>
+<!-- END: SummarySection -->
+<!-- BEGIN: CheckoutAction -->
+<section class="px-6 py-8" data-purpose="checkout-button">
+<button class="w-full bg-gradient-to-r from-secondary to-secondary-container text-white rounded-full py-6 flex items-center justify-center gap-4 transition-transform active:scale-[0.98] shadow-xl shadow-secondary/20">
+<span class="text-sm font-bold uppercase tracking-[0.2em]">Checkout</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center text-[10px] text-outline font-bold tracking-widest mt-6 uppercase">
+        Free shipping on all orders over LKR 25,000
+      </p>
+</section>
+<!-- END: CheckoutAction -->
+</main>
+<!-- BEGIN: BottomNavigation -->
+<footer class="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-2xl px-6 pb-8 pt-4 flex items-center justify-between z-50 max-w-md mx-auto rounded-t-3xl shadow-[0_-4px_30px_rgba(68,42,34,0.05)]" data-purpose="bottom-nav">
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-primary/40 group-hover:text-secondary transition-colors">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">search</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-primary/40 group-hover:text-secondary transition-colors">Search</span>
+</button>
+<button class="flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-secondary">Cart</span>
+</button>
+<button class="flex flex-col items-center gap-1 group">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-primary/40 group-hover:text-secondary transition-colors">Profile</span>
+</button>
+</footer>
+<!-- END: BottomNavigation -->
+</body></html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Order Confirmation - MOOD</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#442a22",
+          "secondary": "#a04022",
+          "secondary-container": "#fe8763",
+          "background": "#fcf9f4",
+          "surface-container": "#f0ede9",
+          "surface-container-low": "#f6f3ee",
+          "on-background": "#1c1c19",
+          "on-surface-variant": "#504441",
+        },
+        fontFamily: {
+          "headline": ["Noto Serif"],
+          "body": ["Manrope"],
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body { font-family: 'Manrope', sans-serif; }
+  h1, h2, h3, .font-serif { font-family: 'Noto Serif', serif; }
+  .font-brand { letter-spacing: 0.25em; }
+  .card-shadow {
+    box-shadow: 0 4px 30px rgba(68, 42, 34, 0.05);
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+</style>
+</head>
+<body class="bg-background min-h-screen flex flex-col text-on-background">
+<!-- BEGIN: Navigation Header -->
+<header class="bg-background/80 backdrop-blur-md px-6 py-5 flex items-center justify-between sticky top-0 z-50" data-purpose="main-header">
+<!-- Menu Icon -->
+<button aria-label="Menu" class="text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<!-- Logo -->
+<div class="text-2xl font-bold font-headline font-brand uppercase text-primary">MOOD</div>
+<!-- Cart Icon -->
+<button aria-label="Cart" class="text-primary">
+<span class="material-symbols-outlined">shopping_bag</span>
+</button>
+</header>
+<!-- END: Navigation Header -->
+<!-- BEGIN: Main Content -->
+<main class="flex-grow flex flex-col items-center px-8 pt-10 pb-32 overflow-y-auto">
+<!-- Hero Illustration -->
+<div class="relative mb-12" data-purpose="order-success-icon">
+<!-- Cart Icon -->
+<svg class="text-primary" fill="none" height="100" viewbox="0 0 100 80" width="120" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 5H20L30 55H80L90 20H25" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<circle cx="35" cy="70" fill="currentColor" r="4"></circle>
+<circle cx="75" cy="70" fill="currentColor" r="4"></circle>
+</svg>
+<!-- Success Checkmark Badge -->
+<div class="absolute -top-2 -right-4 bg-background rounded-full p-1">
+<div class="bg-secondary rounded-full p-2">
+<span class="material-symbols-outlined text-white text-2xl" style="font-variation-settings: 'FILL' 0, 'wght' 700;">check</span>
+</div>
+</div>
+</div>
+<!-- Title and Subtitle -->
+<div class="text-center mb-10">
+<h1 class="text-4xl font-serif font-bold text-primary mb-4">Order Placed!</h1>
+<p class="text-on-surface-variant text-lg font-body leading-relaxed max-w-[300px] mx-auto">
+        Your selection from The MOOD is being prepared with artisanal care.
+      </p>
+</div>
+<!-- Confirmation Card -->
+<div class="w-full bg-surface-container-low rounded-2xl p-8 card-shadow flex flex-col items-center mb-12" data-purpose="confirmation-summary">
+<span class="text-[10px] tracking-widest text-primary/60 font-bold uppercase mb-2">Confirmation Number</span>
+<span class="text-xl font-serif font-bold text-primary mb-6">#ATL-8829-0142</span>
+<!-- Subtle Divider -->
+<div class="w-12 h-[1px] bg-primary/10 mb-6"></div>
+<!-- Item Thumbnails - Updated to match IMAGE_23 -->
+<div class="flex items-center justify-center -space-x-2 mb-6" data-purpose="order-items-preview">
+<!-- Item 1: Black Silk Fabric -->
+<div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-surface-container-low z-10">
+<img alt="Item thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIL1AAphMevMJzfStXpzxoyxKJWTQ1yk5R4O18_ItwtljIidvbnZk0VWEggvwLh6SFwvsMMFH4szB-SEf7fZDO4viFeYQ3wdiWiXGGt1UPVHHUzcU3XbjOrFIN8iVc70FYSaoSF0w4IXII1BTX2BkxJkRGi_UErl0Q_-9JReIYubkslrlgRmJiOWt0hJ80XAA42ZPRq9DtOz8LZLhQeJrxFR3HGllF_xbyUKpdQNO0LjM50btkeBFl38carp7ipz48q97HKW660uU"/>
+</div>
+<!-- Item 2: Cream Sneakers -->
+<div class="w-14 h-14 rounded-xl overflow-hidden border-2 border-surface-container-low z-20">
+<img alt="Item thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlKhhOoB329QjjJyu9raaPQHMcXi7padY4kJ9WMx6JuukcGvXUgp529_G5dqw8EBxOBK4YEuImtnnm0oDA14qXYPWufbukb-CEnq5ems29o3811cw65bvn5UclPZ65H2WWMR5hZDeh6PzsoAtZ_0NvUz_h2mt081_gAlKSvv8ZAzY5zkmKalj_gc_f3HXjNWmqOqS2ooBDUmWNru1tvN4wL5S2szm9RGCKyIam5QHPKuB68EZ47oqZBWWNHnvBs9LeBUU5c1vy5fM"/>
+</div>
+<!-- Item 3: Count Badge -->
+<div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center border-2 border-surface-container-low z-30">
+<span class="text-xs font-bold text-primary">+1</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant font-medium">
+        Estimated delivery: <span class="text-primary font-bold">Oct 24 - Oct 26</span>
+</p>
+</div>
+<!-- Action Buttons -->
+<div class="w-full space-y-4 px-2" data-purpose="action-buttons">
+<button class="w-full py-5 bg-gradient-to-r from-secondary to-secondary-container text-white font-bold rounded-full uppercase tracking-widest text-sm shadow-lg shadow-secondary/20 hover:scale-[1.02] transition-transform">
+        Continue Shopping
+      </button>
+<button class="w-full py-5 bg-surface-container text-primary font-bold rounded-full uppercase tracking-widest text-sm hover:bg-surface-container-high transition-colors">
+        View Order Details
+      </button>
+</div>
+</main>
+<!-- END: Main Content -->
+<!-- BEGIN: Tab Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-2xl px-8 py-4 pb-8 rounded-t-3xl shadow-[0_-4px_30px_rgba(68,42,34,0.05)] border-t border-primary/5" data-purpose="bottom-navigation">
+<div class="max-w-md mx-auto flex justify-between items-end">
+<!-- Home -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">home</span>
+<span class="text-[10px] font-bold text-primary/40 tracking-widest uppercase">HOME</span>
+</a>
+<!-- Search -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">search</span>
+<span class="text-[10px] font-bold text-primary/40 tracking-widest uppercase">SEARCH</span>
+</a>
+<!-- Cart -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-primary/40 group-hover:text-secondary transition-colors">shopping_cart</span>
+<span class="text-[10px] font-bold text-primary/40 tracking-widest uppercase">CART</span>
+</a>
+<!-- Profile (Active State) -->
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase">PROFILE</span>
+</a>
+</div>
+</nav>
+<!-- END: Tab Navigation -->
+</body></html>
