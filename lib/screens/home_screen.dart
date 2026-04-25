@@ -3,8 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _selectedCategory = 'Women';
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +43,9 @@ class HomeScreen extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -55,32 +64,38 @@ class HomeScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF6F3EE),
                   borderRadius: BorderRadius.circular(50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: const Color(0xFFD4C3BE).withOpacity(0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.search, color: colorScheme.primary, size: 20),
+                    Icon(Icons.search, color: colorScheme.primary.withOpacity(0.45), size: 22),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        'Search products...',
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search products...',
+                          hintStyle: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.primary.withOpacity(0.35),
+                            letterSpacing: 0.3,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
                         style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary.withOpacity(0.5),
-                          letterSpacing: 0.3,
+                          color: colorScheme.primary,
                         ),
                       ),
                     ),
-                    Icon(Icons.camera_alt_outlined, color: colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Icon(Icons.camera_alt_outlined, color: colorScheme.primary.withOpacity(0.45), size: 22),
                   ],
                 ),
               ),
@@ -203,13 +218,19 @@ class HomeScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: [
-                    _buildCategoryChip('Women', true, colorScheme, textTheme),
-                    const SizedBox(width: 12),
-                    _buildCategoryChip('Men', false, colorScheme, textTheme),
-                    const SizedBox(width: 12),
-                    _buildCategoryChip('Kids', false, colorScheme, textTheme),
-                  ],
+                  children: ['Women', 'Men', 'Kids', 'Accessories'].map((cat) {
+                    return Padding(
+                      padding: EdgeInsets.only(right: cat != 'Accessories' ? 12 : 0),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = cat;
+                          });
+                        },
+                        child: _buildCategoryChip(cat, _selectedCategory == cat, colorScheme, textTheme),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -435,7 +456,9 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildCategoryChip(String label, bool isActive, ColorScheme colorScheme, TextTheme textTheme) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
       decoration: BoxDecoration(
         color: isActive ? colorScheme.primary : const Color(0xFFEBE8E3),

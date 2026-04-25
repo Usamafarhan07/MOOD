@@ -62,7 +62,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               actions: [
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
                 ),
                 const SizedBox(width: 8),
               ],

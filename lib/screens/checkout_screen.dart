@@ -59,7 +59,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                      onPressed: () {},
+                      onPressed: () {
+                        context.push('/notifications');
+                      },
                     ),
                     Positioned(
                       right: 6,
@@ -409,30 +411,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       children: [
         Text(
           label,
-          style: theme.textTheme.labelSmall?.copyWith(
+          style: theme.textTheme.labelMedium?.copyWith(
             color: theme.colorScheme.primary,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.0,
-            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
+            fontSize: 12,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFD4C3BE).withOpacity(0.4),
+            ),
           ),
           child: TextField(
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF827470).withOpacity(0.5),
+                color: const Color(0xFF827470).withOpacity(0.6),
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),

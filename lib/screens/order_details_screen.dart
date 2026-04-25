@@ -51,8 +51,13 @@ class OrderDetailsScreen extends StatelessWidget {
               centerTitle: true,
               actions: [
                 IconButton(
-                  icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {},
+                  icon: Icon(
+                    Icons.notifications_outlined,
+                    color: colorScheme.primary,
+                  ),
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -131,8 +136,12 @@ class OrderDetailsScreen extends StatelessWidget {
 
             // Shipping Destination
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 8.0,
+              ),
               child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerLow,
@@ -143,20 +152,21 @@ class OrderDetailsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'SHIPPING DESTINATION',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF504441),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2.0,
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontFamily: 'Manrope',
+                        color: const Color(0xFF827470),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1.5,
+                        fontSize: 11,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Hiruni Dave',
-                      style: textTheme.headlineSmall?.copyWith(
+                      'Usama Farhan',
+                      style: textTheme.bodyLarge?.copyWith(
                         color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -170,32 +180,27 @@ class OrderDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     InkWell(
                       onTap: () {},
-                      child: Container(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'TRACK DELIVERY',
+                            style: textTheme.labelSmall?.copyWith(
                               color: colorScheme.primary,
-                              width: 1,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.0,
+                              fontSize: 11,
+                              decoration: TextDecoration.underline,
+                              decorationColor: colorScheme.primary,
                             ),
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'TRACK DELIVERY',
-                              style: textTheme.labelSmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 2.0,
-                                fontSize: 10,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.arrow_forward, size: 14, color: colorScheme.primary),
-                          ],
-                        ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 16,
+                            color: colorScheme.primary,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -205,11 +210,15 @@ class OrderDetailsScreen extends StatelessWidget {
 
             // Payment Method
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 8.0,
+              ),
               child: Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainer,
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -217,11 +226,12 @@ class OrderDetailsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'PAYMENT METHOD',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF504441),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2.0,
-                        fontSize: 10,
+                      style: TextStyle(
+                        fontFamily: 'Manrope',
+                        color: const Color(0xFF827470),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1.5,
+                        fontSize: 11,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -232,37 +242,40 @@ class OrderDetailsScreen extends StatelessWidget {
                           height: 32,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
+                            color: const Color(0xFF1A1F71),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(
+                          child: const Text(
                             'VISA',
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.background,
+                            style: TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontStyle: FontStyle.italic,
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Visa ending in 8842',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Visa ending in 8842',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Exp: 09/27',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF504441),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Exp: 09/27',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: const Color(0xFF504441),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -281,7 +294,10 @@ class OrderDetailsScreen extends StatelessWidget {
 
             // Selected Pieces
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -295,10 +311,11 @@ class OrderDetailsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Item 1
                   _buildOrderPiece(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAA4a-kjBY4qKcUmF5ARkfLaufrQld3MCx574KqV3vJnUoJE58U8EJZQNj2qhqRrKoy29uOrlprvc-gRaEYr9OOXpOU99W_D65TSvPSXUxcDVywBpRoRk4mQlRLYJT6VvLwv6vfjEep40AszgXgpRWQ8wkVJQH7Bb3fXpUjV9BVLhJKHAu9vpQmqI1ss05HrVuqRhUFWqb6R1VnWsymMIwBOxZFE5OrVg_fFI2U4fY_GBhUsnQYwcMhXC187k198VWLQWo5GwpYGe4',
+                    imageUrl:
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAA4a-kjBY4qKcUmF5ARkfLaufrQld3MCx574KqV3vJnUoJE58U8EJZQNj2qhqRrKoy29uOrlprvc-gRaEYr9OOXpOU99W_D65TSvPSXUxcDVywBpRoRk4mQlRLYJT6VvLwv6vfjEep40AszgXgpRWQ8wkVJQH7Bb3fXpUjV9BVLhJKHAu9vpQmqI1ss05HrVuqRhUFWqb6R1VnWsymMIwBOxZFE5OrVg_fFI2U4fY_GBhUsnQYwcMhXC187k198VWLQWo5GwpYGe4',
                     title: 'Sculpted Wool Overcoat',
                     price: 'LKR 9000',
                     color: 'Midnight Black',
@@ -307,10 +324,11 @@ class OrderDetailsScreen extends StatelessWidget {
                     theme: theme,
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Item 2
                   _buildOrderPiece(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0',
+                    imageUrl:
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0',
                     title: 'Toscana Leather Boot',
                     price: 'LKR 15,000',
                     color: 'Espresso',
@@ -325,7 +343,10 @@ class OrderDetailsScreen extends StatelessWidget {
 
             // Price Summary
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
@@ -495,14 +516,23 @@ class OrderDetailsScreen extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNavItem(Icons.home, 'HOME', false, theme, context),
-                    _buildNavItem(Icons.search, 'SEARCH', false, theme, context),
-                    _buildNavItem(Icons.shopping_cart, 'CART', true, theme, context),
-                    _buildNavItem(Icons.person_outline, 'PROFILE', false, theme, context),
+                    _buildNavItem(Icons.home, 'HOME', false, () {
+                      context.go('/home');
+                    }, colorScheme),
+                    _buildNavItem(Icons.search, 'SEARCH', false, () {
+                      context.go('/products');
+                    }, colorScheme),
+                    _buildNavItem(Icons.shopping_cart, 'CART', true, () {}, colorScheme),
+                    _buildNavItem(Icons.person_outline, 'PROFILE', false, () {
+                      context.go('/profile');
+                    }, colorScheme),
                   ],
                 ),
               ),
@@ -620,10 +650,7 @@ class OrderDetailsScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 2),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.primary,
-                  width: 1,
-                ),
+                bottom: BorderSide(color: theme.colorScheme.primary, width: 1),
               ),
             ),
             child: Row(
@@ -639,7 +666,11 @@ class OrderDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward, size: 14, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.arrow_forward,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
               ],
             ),
           ),
@@ -655,10 +686,7 @@ class OrderDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: theme.colorScheme.primary,
-              width: 1,
-            ),
+            bottom: BorderSide(color: theme.colorScheme.primary, width: 1),
           ),
         ),
         child: Text(
@@ -674,33 +702,25 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isSelected, ThemeData theme, BuildContext context) {
-    final color = isSelected ? theme.colorScheme.secondary : theme.colorScheme.primary.withOpacity(0.4);
-    
-    return InkWell(
-      onTap: () {
-        if (label == 'HOME') {
-          context.go('/home');
-        } else if (label == 'SEARCH') {
-          context.go('/products');
-        } else if (label == 'CART') {
-          context.go('/cart');
-        } else if (label == 'PROFILE') {
-          context.go('/profile');
-        }
-      },
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap, ColorScheme colorScheme) {
+    return GestureDetector(
+      onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(
+            icon,
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            size: 24,
+          ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-              color: color,
+              letterSpacing: 1.5,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
             ),
           ),
         ],

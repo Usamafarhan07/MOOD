@@ -11,6 +11,7 @@ import 'package:mood/screens/order_confirmation_screen.dart';
 import 'package:mood/screens/order_details_screen.dart';
 import 'package:mood/screens/wishlist_screen.dart';
 import 'package:mood/screens/profile_screen.dart';
+import 'package:mood/screens/notifications_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -62,6 +63,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
     ),
   ],
 );

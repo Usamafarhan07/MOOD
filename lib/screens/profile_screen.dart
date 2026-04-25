@@ -47,7 +47,9 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                      onPressed: () {},
+                      onPressed: () {
+                        context.push('/notifications');
+                      },
                     ),
                     Positioned(
                       right: 6,
@@ -99,8 +101,8 @@ class ProfileScreen extends StatelessWidget {
                   child: Stack(
                     children: [
                       ClipOval(
-                        child: Image.network(
-                          'https://lh3.googleusercontent.com/aida/ADBb0uiAV6u-a08meWRJ0oXldb2-AfU6bzMuF-yXQ7sSdy0jQPx44zrfT0E7riZCSus92O-4uNEMZaDPuP3YRSX0Zjnu36E1QWXbOupuYw7T9PrQ88Qou-e5v7iZ7SuzSFPlcRUeCN1PPQbTQ1mwDB67UWQ0I1NFpi7qJx2NRHGI_1Vu6GaEvK1ZrAfJ13G1YZGGI17dPIS_A9DFlu9L-b-0iUlecx6aEwX9KLxTmI0Jxi8BdDHBXvs53zbKy4YS9erpETkshK1scA9Czg',
+                        child: Image.asset(
+                          'assets/user.jpg',
                           fit: BoxFit.cover,
                           width: 120,
                           height: 120,
@@ -133,7 +135,7 @@ class ProfileScreen extends StatelessWidget {
 
                 // Name & Email
                 Text(
-                  'Hiruni Dave',
+                  'Usama Farhan',
                   style: GoogleFonts.notoSerif(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -143,7 +145,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'hiruni07@gmail.com',
+                  'usamafarhan003@gmail.com',
                   style: textTheme.bodySmall?.copyWith(
                     color: const Color(0xFF827470),
                     letterSpacing: 0.5,
@@ -228,73 +230,69 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 48),
 
             // Navigation Menu
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F3EE),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  _buildMenuItem(
-                    icon: Icons.person_outline,
-                    label: 'Edit Profile',
-                    onTap: () {},
-                    theme: theme,
-                  ),
-                  _buildDivider(),
-                  _buildMenuItem(
-                    icon: Icons.login,
-                    label: 'Login',
-                    onTap: () {
-                      context.go('/login');
-                    },
-                    theme: theme,
-                  ),
-                  _buildDivider(),
-                  _buildMenuItem(
-                    icon: Icons.favorite,
-                    label: 'My Wishlist',
-                    badge: '2',
-                    onTap: () {
-                      context.push('/wishlist');
-                    },
-                    theme: theme,
-                  ),
-                  _buildDivider(),
-                  _buildMenuItem(
-                    icon: Icons.history,
-                    label: 'Order History',
-                    onTap: () {
-                      context.push('/order_details');
-                    },
-                    theme: theme,
-                  ),
-                  _buildDivider(),
-                  _buildMenuItem(
-                    icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    onTap: () {},
-                    theme: theme,
-                  ),
-                ],
-              ),
+            Column(
+              children: [
+                _buildMenuCard(
+                  icon: Icons.person_outline,
+                  label: 'Edit Profile',
+                  onTap: () {},
+                  theme: theme,
+                ),
+                const SizedBox(height: 10),
+                _buildMenuCard(
+                  icon: Icons.shopping_bag_outlined,
+                  label: 'My Orders',
+                  onTap: () {
+                    context.push('/order_details');
+                  },
+                  theme: theme,
+                ),
+                const SizedBox(height: 10),
+                _buildMenuCard(
+                  icon: Icons.favorite_outline,
+                  label: 'My Wishlist',
+                  onTap: () {
+                    context.push('/wishlist');
+                  },
+                  theme: theme,
+                ),
+                const SizedBox(height: 10),
+                _buildMenuCard(
+                  icon: Icons.payment_outlined,
+                  label: 'Payment Methods',
+                  onTap: () {},
+                  theme: theme,
+                ),
+                const SizedBox(height: 10),
+                _buildMenuCard(
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  onTap: () {},
+                  theme: theme,
+                ),
+              ],
             ),
             const SizedBox(height: 32),
 
             // Logout Button
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F3EE),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: _buildMenuItem(
-                icon: Icons.logout,
-                label: 'Logout',
-                onTap: () {
-                  context.go('/');
-                },
-                theme: theme,
-                isLogout: true,
+            GestureDetector(
+              onTap: () {
+                context.go('/');
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout, color: const Color(0xFFC0392B), size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Logout',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFFC0392B),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 64),
@@ -405,76 +403,56 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem({
+  Widget _buildMenuCard({
     required IconData icon,
     required String label,
-    String? badge,
     required VoidCallback onTap,
     required ThemeData theme,
-    bool isLogout = false,
   }) {
-    final color = isLogout
-        ? theme.colorScheme.secondary.withOpacity(0.8)
-        : theme.colorScheme.primary.withOpacity(0.7);
-
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.3,
-                color: isLogout
-                    ? theme.colorScheme.secondary.withOpacity(0.8)
-                    : theme.colorScheme.primary,
-              ),
-            ),
-            if (badge != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  badge,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-            const Spacer(),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: isLogout
-                  ? theme.colorScheme.secondary.withOpacity(0.4)
-                  : const Color(0xFF827470).withOpacity(0.4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD4C3BE).withOpacity(0.15),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Divider(
-        height: 1,
-        color: const Color(0xFFD4C3BE).withOpacity(0.2),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3EFEA),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: theme.colorScheme.primary.withOpacity(0.7), size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                  color: const Color(0xFF2D2013),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: const Color(0xFF827470).withOpacity(0.35),
+            ),
+          ],
+        ),
       ),
     );
   }

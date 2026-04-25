@@ -45,7 +45,9 @@ class WishlistScreen extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -197,10 +199,18 @@ class WishlistScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNavItem(Icons.home, 'HOME', false, theme, context),
-                    _buildNavItem(Icons.search, 'SEARCH', false, theme, context),
-                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, theme, context),
-                    _buildNavItem(Icons.person_outline, 'PROFILE', false, theme, context),
+                    _buildNavItem(Icons.home, 'HOME', false, () {
+                      context.go('/home');
+                    }, colorScheme),
+                    _buildNavItem(Icons.search, 'SEARCH', false, () {
+                      context.go('/products');
+                    }, colorScheme),
+                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, () {
+                      context.go('/cart');
+                    }, colorScheme),
+                    _buildNavItem(Icons.person_outline, 'PROFILE', false, () {
+                      context.go('/profile');
+                    }, colorScheme),
                   ],
                 ),
               ),
@@ -348,33 +358,25 @@ class WishlistScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isSelected, ThemeData theme, BuildContext context) {
-    final color = isSelected ? theme.colorScheme.secondary : theme.colorScheme.primary.withOpacity(0.4);
-    
-    return InkWell(
-      onTap: () {
-        if (label == 'HOME') {
-          context.go('/home');
-        } else if (label == 'SEARCH') {
-          context.go('/products');
-        } else if (label == 'CART') {
-          context.go('/cart');
-        } else if (label == 'PROFILE') {
-          context.go('/profile');
-        }
-      },
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap, ColorScheme colorScheme) {
+    return GestureDetector(
+      onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(
+            icon,
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            size: 24,
+          ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-              color: color,
+              letterSpacing: 1.5,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
             ),
           ),
         ],

@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 
-class ProductListingScreen extends StatelessWidget {
+class ProductListingScreen extends StatefulWidget {
   const ProductListingScreen({super.key});
+
+  @override
+  State<ProductListingScreen> createState() => _ProductListingScreenState();
+}
+
+class _ProductListingScreenState extends State<ProductListingScreen> {
+  String _selectedFilter = 'All Items';
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +47,9 @@ class ProductListingScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-            onPressed: () {},
+            onPressed: () {
+              context.push('/notifications');
+            },
           ),
           const SizedBox(width: 8),
         ],
@@ -80,12 +89,13 @@ class ProductListingScreen extends StatelessWidget {
 
             // Search Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF6F3EE),
                         borderRadius: BorderRadius.circular(50),
@@ -95,21 +105,21 @@ class ProductListingScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.search, color: colorScheme.primary.withOpacity(0.5), size: 18),
-                          const SizedBox(width: 10),
+                          Icon(Icons.search, color: colorScheme.primary.withOpacity(0.45), size: 22),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
                               decoration: InputDecoration(
                                 hintText: 'Search products...',
-                                hintStyle: textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.primary.withOpacity(0.4),
+                                hintStyle: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.primary.withOpacity(0.35),
                                   letterSpacing: 0.3,
                                 ),
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
                               ),
-                              style: textTheme.bodySmall?.copyWith(
+                              style: textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.primary,
                               ),
                             ),
@@ -120,16 +130,16 @@ class ProductListingScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF6F3EE),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: const Color(0xFFD4C3BE).withOpacity(0.3),
                       ),
                     ),
-                    child: Icon(Icons.tune_outlined, color: colorScheme.primary.withOpacity(0.6), size: 18),
+                    child: Icon(Icons.tune_outlined, color: colorScheme.primary.withOpacity(0.6), size: 22),
                   ),
                 ],
               ),
@@ -140,13 +150,19 @@ class ProductListingScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
-                children: [
-                  _buildCategoryChip('All Items', true, theme),
-                  const SizedBox(width: 12),
-                  _buildCategoryChip('Outerwear', false, theme),
-                  const SizedBox(width: 12),
-                  _buildCategoryChip('Knitwear', false, theme),
-                ],
+                children: ['All Items', 'Outerwear', 'Knitwear', 'Accessories', 'Footwear'].map((filter) {
+                  return Padding(
+                    padding: EdgeInsets.only(right: filter != 'Footwear' ? 12 : 0),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedFilter = filter;
+                        });
+                      },
+                      child: _buildCategoryChip(filter, _selectedFilter == filter, theme),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
             const SizedBox(height: 40),
@@ -339,10 +355,16 @@ class ProductListingScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNavItem(Icons.home, 'HOME', false, theme, context),
-                    _buildNavItem(Icons.search, 'SEARCH', true, theme, context),
-                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, theme, context),
-                    _buildNavItem(Icons.person_outline, 'PROFILE', false, theme, context),
+                    _buildNavItem(Icons.home, 'HOME', false, () {
+                      context.go('/home');
+                    }, colorScheme),
+                    _buildNavItem(Icons.search, 'SEARCH', true, () {}, colorScheme),
+                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, () {
+                      context.go('/cart');
+                    }, colorScheme),
+                    _buildNavItem(Icons.person_outline, 'PROFILE', false, () {
+                      context.go('/profile');
+                    }, colorScheme),
                   ],
                 ),
               ),
@@ -354,7 +376,9 @@ class ProductListingScreen extends StatelessWidget {
   }
 
   Widget _buildCategoryChip(String label, bool isSelected, ThemeData theme) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       decoration: BoxDecoration(
         color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHigh,
@@ -473,33 +497,25 @@ class ProductListingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isSelected, ThemeData theme, BuildContext context) {
-    final color = isSelected ? theme.colorScheme.secondary : theme.colorScheme.primary.withOpacity(0.4);
-    
-    return InkWell(
-      onTap: () {
-        if (label == 'HOME') {
-          context.go('/home');
-        } else if (label == 'SEARCH') {
-          context.go('/products');
-        } else if (label == 'CART') {
-          context.go('/cart');
-        } else if (label == 'PROFILE') {
-          context.go('/profile');
-        }
-      },
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap, ColorScheme colorScheme) {
+    return GestureDetector(
+      onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(
+            icon,
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            size: 24,
+          ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(
+            style: TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-              color: color,
+              letterSpacing: 1.5,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
             ),
           ),
         ],

@@ -45,7 +45,9 @@ class OrderConfirmationScreen extends StatelessWidget {
               actions: [
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/notifications');
+                  },
                 ),
                 const SizedBox(width: 8),
               ],
@@ -299,40 +301,6 @@ class OrderConfirmationScreen extends StatelessWidget {
         ),
       ),
 
-      // Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.9),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.primary.withOpacity(0.05),
-              blurRadius: 30,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(Icons.home, 'HOME', false, theme, context),
-                    _buildNavItem(Icons.search, 'SEARCH', false, theme, context),
-                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, theme, context),
-                    _buildNavItem(Icons.person, 'PROFILE', true, theme, context),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -351,40 +319,6 @@ class OrderConfirmationScreen extends StatelessWidget {
           imageUrl,
           fit: BoxFit.cover,
         ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isSelected, ThemeData theme, BuildContext context) {
-    final color = isSelected ? theme.colorScheme.secondary : theme.colorScheme.primary.withOpacity(0.4);
-    
-    return InkWell(
-      onTap: () {
-        if (label == 'HOME') {
-          context.go('/home');
-        } else if (label == 'SEARCH') {
-          context.go('/products');
-        } else if (label == 'CART') {
-          context.go('/cart');
-        } else if (label == 'PROFILE') {
-          context.go('/profile');
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2.0,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }
