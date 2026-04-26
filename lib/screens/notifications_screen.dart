@@ -9,7 +9,6 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
