@@ -71,7 +71,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 3.6,
-                        color: colorScheme.primary.withOpacity(0.6),
+                        color: colorScheme.primary.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -88,7 +88,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     Text(
                       'Please enter your details to register.',
                       style: textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFF504441).withOpacity(0.8),
+                        color: const Color(0xFF504441).withValues(alpha: 0.8),
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -153,7 +153,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               child: RichText(
                                 text: TextSpan(
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: const Color(0xFF504441).withOpacity(0.7),
+                                    color: const Color(0xFF504441).withValues(alpha: 0.7),
                                     height: 1.5,
                                   ),
                                   children: [
@@ -164,7 +164,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: const Color(0xFFD4C3BE).withOpacity(0.3),
+                                        decorationColor: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                                       ),
                                     ),
                                     const TextSpan(text: ' and '),
@@ -174,7 +174,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: const Color(0xFFD4C3BE).withOpacity(0.3),
+                                        decorationColor: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                                       ),
                                     ),
                                   ],
@@ -223,7 +223,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF504441).withOpacity(0.6),
+                            color: const Color(0xFF504441).withValues(alpha: 0.6),
                             letterSpacing: 0.5,
                           ),
                           children: [
@@ -234,7 +234,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
-                                decorationColor: colorScheme.primary.withOpacity(0.2),
+                                decorationColor: colorScheme.primary.withValues(alpha: 0.2),
                               ),
                             ),
                           ],
@@ -260,7 +260,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          const Color(0xFFD4C3BE).withOpacity(0.3),
+                          const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                           Colors.transparent,
                         ],
                       ),
@@ -272,7 +272,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     style: textTheme.labelSmall?.copyWith(
                       fontSize: 10,
                       letterSpacing: 2.5,
-                      color: colorScheme.primary.withOpacity(0.4),
+                      color: colorScheme.primary.withValues(alpha: 0.4),
                     ),
                   ),
                 ],
@@ -313,7 +313,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF504441).withOpacity(0.3),
+              color: const Color(0xFF504441).withValues(alpha: 0.3),
             ),
             filled: true,
             fillColor: const Color(0xFFEBE8E3),
@@ -356,7 +356,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           decoration: InputDecoration(
             hintText: '••••••••••••',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF504441).withOpacity(0.3),
+              color: const Color(0xFF504441).withValues(alpha: 0.3),
             ),
             filled: true,
             fillColor: const Color(0xFFEBE8E3),
@@ -374,7 +374,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       _obscurePassword
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: const Color(0xFF504441).withOpacity(0.4),
+                      color: const Color(0xFF504441).withValues(alpha: 0.4),
                     ),
                     onPressed: () {
                       setState(() {

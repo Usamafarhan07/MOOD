@@ -17,7 +17,6 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: primary,
         secondary: secondary,
-        background: background,
         surface: background,
         surfaceContainerLow: surfaceContainerLow,
         surfaceContainerHigh: surfaceContainerHigh,

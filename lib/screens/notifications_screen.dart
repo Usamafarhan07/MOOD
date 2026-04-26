@@ -12,13 +12,13 @@ class NotificationsScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBody: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(
           decoration: BoxDecoration(
-            color: colorScheme.background.withOpacity(0.7),
+            color: colorScheme.surface.withValues(alpha: 0.7),
           ),
           child: AppBar(
             backgroundColor: Colors.transparent,
@@ -103,7 +103,7 @@ class NotificationsScreen extends StatelessWidget {
             _buildIconNotification(
               context: context,
               icon: Icons.favorite,
-              iconBgColor: const Color(0xFFFE8763).withOpacity(0.2),
+              iconBgColor: const Color(0xFFFE8763).withValues(alpha: 0.2),
               iconColor: const Color(0xFFA04022),
               title: 'Style Alert: Pieces you loved are back in stock',
               subtitle: 'The L\'Artiste Trousers in Midnight Sand have returned to our atelier.',
@@ -149,14 +149,14 @@ class NotificationsScreen extends StatelessWidget {
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.8),
+          color: colorScheme.surface.withValues(alpha: 0.8),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(48),
             topRight: Radius.circular(48),
           ),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.04),
+              color: colorScheme.primary.withValues(alpha: 0.04),
               blurRadius: 40,
               offset: const Offset(0, -4),
             ),
@@ -225,7 +225,7 @@ class NotificationsScreen extends StatelessWidget {
                   colorBlendMode: BlendMode.saturation,
                   errorBuilder: (context, error, stackTrace) => Container(
                     color: const Color(0xFFF0EDE9),
-                    child: Icon(Icons.image, color: colorScheme.primary.withOpacity(0.3)),
+                    child: Icon(Icons.image, color: colorScheme.primary.withValues(alpha: 0.3)),
                   ),
                 ),
               ),
@@ -375,7 +375,7 @@ class NotificationsScreen extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.primary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.primary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -385,7 +385,7 @@ class NotificationsScreen extends StatelessWidget {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.primary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.primary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],

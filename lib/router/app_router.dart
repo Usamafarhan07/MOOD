@@ -38,7 +38,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/product_details',
-      builder: (context, state) => const ProductDetailsScreen(),
+      builder: (context, state) {
+        final productData = state.extra as Map<String, dynamic>?;
+        return ProductDetailsScreen(productData: productData);
+      },
     ),
     GoRoute(
       path: '/cart',

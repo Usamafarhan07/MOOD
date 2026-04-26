@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/shopping_cart_screen.dart';
 
-class WishlistScreen extends StatelessWidget {
+class WishlistItemData {
+  final String imageUrl;
+  final String title;
+  final String price;
+  final String subtitle;
+
+  WishlistItemData({
+    required this.imageUrl,
+    required this.title,
+    required this.price,
+    required this.subtitle,
+  });
+}
+
+final List<WishlistItemData> globalWishlistItems = [];
+
+class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
 
+  @override
+  State<WishlistScreen> createState() => _WishlistScreenState();
+}
+
+class _WishlistScreenState extends State<WishlistScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -12,7 +34,7 @@ class WishlistScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: false,
       extendBody: true,
       appBar: PreferredSize(
@@ -21,7 +43,7 @@ class WishlistScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back, color: colorScheme.primary),
@@ -100,37 +122,28 @@ class WishlistScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 children: [
-                  _buildWishlistItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB1eRjK87wIw8owdmzrfPmMB5OrzhD37IYZrrRZDoWztwrGMnlSA17BWjF9B-JG29zy6jBlwyqajnyRB3z-BkeNfqI8hiiTPYkSC2n3A7qukU5Nka78EQedIqN3CcL0-X0u6MzHxmyvQi6DtVC_vHIhwnMxN5DM6vPxkUFcdhQWWcIa5h0-M4-On-4_O-mMKrzQYuei7FBQXiMd0Lx545agSRNTPx6qpLD2Ies8qaeHhnsx-OPWDv4Abo_PN1x7ziYEQ67fvumfjjw',
-                    title: 'Sculpted Wool Overcoat',
-                    price: 'LKR 42,500',
-                    subtitle: 'Outerwear • Midnight Brown',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 48),
-                  _buildWishlistItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCX-m9pXkGXmwf9fXK6pC-spwgp5auuE5NC6hrpZxcrAD4rkvTnhFS3YYZFdoqQUCabvn7XVttIoVEFBlBdF5lZl73UYWN9x8K1ZfCawIx5lTC8MGjcGK8-YA3knpRnjXElTZ9svTfcGNHqjS7V_XgJojroxR1Mew4E0uVkUB-5V3jq35NOGbqnBCUcY6Fg5Zx-CCWCbDCGNeHpRNY_HhNootg2_YCBzKvUSv5UA8T8_CtyfK5Z3MFE9CbbpE0QgRCIMgoahCt9HDw',
-                    title: 'Toscana Leather Boot',
-                    price: 'LKR 28,900',
-                    subtitle: 'Footwear • Raw Umber',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 48),
-                  _buildWishlistItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC7JVXDqvUSsdQ-ayhfnCQhybXMqmRjFmX7ogU9F23xW1pqcGObX_mNM9Q8ukyDjlRI0KbcNOL_BicuBaYpdnA0Gjq4M4rS8BUY7Mi6Uh2OtICk_6GSe2DbyX_FHf9j9i17pptgCz1CbLKAwVJFloUHgs8JXZcUuijsBkLZfxSX94K8XGjqQEK5-hL3sbj8U0r-T7uUhJDhQ9qso5QPXkOcn7eiAPwUX_oXF8ooRu2hA0NybZNeo3PjuqAYCZhmiBhPy0ucFgBX1HQ',
-                    title: 'Silk Ribbed Mockneck',
-                    price: 'LKR 14,200',
-                    subtitle: 'Essentials • Espresso',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 48),
-                  _buildWishlistItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC4QMetCyzf1S2lBep7W8vCCFVUOdcAyp5ebqqO30BIrfYwqDs15o7xie5S8qgmY2avVDYE695XUeIYdWu5q2fGSN28qOgG0EmnlJta0XF8Wlu3uVuieDm1B4butPV6Vr62WBIfAuv1BVmbVaay7anoBfvHS2k3VHzya6kOciAkdkT4Ky2yvu4b2S4XKzk3apfhSpi5xoyYakiqbbg2tDD5MgSIW5x1ulBJiMWuI3FsETLfzqISkP9UFQ5iqzGeXuo_cY_pYQMyCiE',
-                    title: 'Sculptural Tote Bag',
-                    price: 'LKR 56,000',
-                    subtitle: 'Accessories • Obsidian Brown',
-                    theme: theme,
-                  ),
+                  if (globalWishlistItems.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Text('Your wishlist is empty', style: textTheme.bodyMedium),
+                    )
+                  else
+                    ...globalWishlistItems.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 48),
+                          child: _buildWishlistItem(
+                            context: context,
+                            imageUrl: item.imageUrl,
+                            title: item.title,
+                            price: item.price,
+                            subtitle: item.subtitle,
+                            theme: theme,
+                            onRemove: () {
+                              setState(() {
+                                globalWishlistItems.removeWhere((w) => w.title == item.title);
+                              });
+                            },
+                          ),
+                        )),
                 ],
               ),
             ),
@@ -179,11 +192,11 @@ class WishlistScreen extends StatelessWidget {
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.9),
+          color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.04),
+              color: colorScheme.primary.withValues(alpha: 0.04),
               blurRadius: 40,
               offset: const Offset(0, -4),
             ),
@@ -222,13 +235,24 @@ class WishlistScreen extends StatelessWidget {
   }
 
   Widget _buildWishlistItem({
+    required BuildContext context,
     required String imageUrl,
     required String title,
     required String price,
     required String subtitle,
     required ThemeData theme,
+    required VoidCallback onRemove,
   }) {
-    return Column(
+    return InkWell(
+      onTap: () {
+        context.push('/product_details', extra: {
+          'title': title,
+          'price': price,
+          'label': subtitle.split('•').first.trim(), // Extract the label part before bullet point
+          'imageUrl': imageUrl,
+        });
+      },
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Image & Favorite Icon
@@ -247,26 +271,10 @@ class WishlistScreen extends StatelessWidget {
               Positioned(
                 top: 16,
                 right: 16,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.favorite,
-                          color: theme.colorScheme.primary,
-                          size: 24,
-                        ),
-                        onPressed: () {},
-                      ),
-                    ),
-                  ),
+                child: _FavoriteButton(
+                  initialIsFavorite: true,
+                  theme: theme,
+                  onRemove: onRemove,
                 ),
               ),
             ],
@@ -327,14 +335,33 @@ class WishlistScreen extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.secondary.withOpacity(0.2),
+                color: theme.colorScheme.secondary.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
             ],
           ),
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              final priceStr = price.replaceAll(RegExp(r'[^0-9]'), '');
+              final unitPrice = int.tryParse(priceStr) ?? 0;
+              
+              final existingIndex = globalCartItems.indexWhere((item) => item.title == title);
+              if (existingIndex >= 0) {
+                globalCartItems[existingIndex].quantity++;
+              } else {
+                globalCartItems.add(
+                  CartItem(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    imageUrl: imageUrl,
+                    title: title,
+                    subtitle: subtitle,
+                    unitPrice: unitPrice,
+                  ),
+                );
+              }
+              context.push('/cart');
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -355,6 +382,7 @@ class WishlistScreen extends StatelessWidget {
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -366,7 +394,7 @@ class WishlistScreen extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -376,10 +404,71 @@ class WishlistScreen extends StatelessWidget {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatefulWidget {
+  final bool initialIsFavorite;
+  final ThemeData theme;
+  final VoidCallback onRemove;
+
+  const _FavoriteButton({
+    required this.initialIsFavorite,
+    required this.theme,
+    required this.onRemove,
+  });
+
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.initialIsFavorite;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: widget.theme.colorScheme.primary,
+              size: 24,
+            ),
+            onPressed: () {
+              widget.onRemove();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Removed from Wishlist'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: widget.theme.colorScheme.error,
+                  duration: const Duration(seconds: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/shopping_cart_screen.dart';
+import 'package:mood/screens/wishlist_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
-  const ProductDetailsScreen({super.key});
+  final Map<String, dynamic>? productData;
+
+  const ProductDetailsScreen({super.key, this.productData});
 
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
@@ -13,14 +17,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _selectedColorIndex = 0;
   int _selectedSizeIndex = 2; // Default to 'M'
 
-  final List<Color> _colors = [
-    const Color(0xFF0D1B2A),
-    const Color(0xFF5D675B),
-    const Color(0xFFE5E2DD),
-    const Color(0xFF704225),
-  ];
+  late List<Color> _colors;
+  late List<String> _sizes;
+  late String _description;
 
-  final List<String> _sizes = ['XS', 'S', 'M', 'L', 'XL'];
+  @override
+  void initState() {
+    super.initState();
+    final productData = widget.productData ?? {};
+    _colors = productData['colors'] as List<Color>? ?? [
+      const Color(0xFF0D1B2A),
+      const Color(0xFF5D675B),
+      const Color(0xFFE5E2DD),
+      const Color(0xFF704225),
+    ];
+    _sizes = productData['sizes'] as List<String>? ?? ['XS', 'S', 'M', 'L', 'XL'];
+    _description = productData['description'] as String? ?? 
+      'A masterclass in minimalist design. This piece is crafted from ethically sourced premium materials. Featuring a clean, architectural silhouette that transcends seasonal trends.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +42,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    final productData = widget.productData ?? {};
+    final title = productData['title'] ?? 'Structured Wool Belted Coat';
+    final price = productData['price'] ?? 'LKR 9,000';
+    final label = productData['label'] ?? 'AUTUMN/WINTER 24';
+    final imageUrl = productData['imageUrl'] ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuANAwip_SplPsYu1rJwkTzQhd_dzGfh7uwXF0FI3F-lHpKmm5fpStr79od52os4NJR4zKgA6YLcksH08K2xjqwFQ_t1UtmjWQ1dHnpN_mwWn62EzDGyfWzFZEtCXUH14YWQn1CZS7i3FWARs0HcMcn_lCmVj1ETrrheRRAmjb8BUn4ZMZdBRJWc645GfXKUxY_Pzln4Cwihl3FeCLSR7D_OIzUzKHgS4gZonctdAlCElek4Ccedqtuc8Yna01YsiQB3fB40mQN1EKs';
+
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: PreferredSize(
@@ -38,7 +58,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.7),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.7),
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back, color: colorScheme.primary),
@@ -86,7 +106,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     fit: StackFit.expand,
                     children: [
                       Image.network(
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuANAwip_SplPsYu1rJwkTzQhd_dzGfh7uwXF0FI3F-lHpKmm5fpStr79od52os4NJR4zKgA6YLcksH08K2xjqwFQ_t1UtmjWQ1dHnpN_mwWn62EzDGyfWzFZEtCXUH14YWQn1CZS7i3FWARs0HcMcn_lCmVj1ETrrheRRAmjb8BUn4ZMZdBRJWc645GfXKUxY_Pzln4Cwihl3FeCLSR7D_OIzUzKHgS4gZonctdAlCElek4Ccedqtuc8Yna01YsiQB3fB40mQN1EKs',
+                        imageUrl,
                         fit: BoxFit.cover,
                       ),
                       
@@ -102,11 +122,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(32),
                               decoration: BoxDecoration(
-                                color: colorScheme.background.withOpacity(0.7),
+                                color: colorScheme.surface.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(32),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.08),
+                                    color: colorScheme.primary.withValues(alpha: 0.08),
                                     blurRadius: 80,
                                     offset: const Offset(0, 40),
                                   ),
@@ -116,7 +136,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'AUTUMN/WINTER 24',
+                                    label.toUpperCase(),
                                     style: textTheme.labelSmall?.copyWith(
                                       color: colorScheme.secondary,
                                       fontWeight: FontWeight.bold,
@@ -126,7 +146,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Structured Wool Belted Coat',
+                                    title,
                                     style: textTheme.headlineSmall?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 28,
@@ -138,17 +158,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'LKR 9,000',
-                                            style: textTheme.labelLarge?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 20,
-                                              letterSpacing: -0.5,
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              price,
+                                              style: textTheme.labelLarge?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 20,
+                                                letterSpacing: -0.5,
+                                              ),
                                             ),
-                                          ),
                                           const SizedBox(height: 4),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -172,6 +193,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                           ),
                                         ],
                                       ),
+                                    ),
                                     ],
                                   ),
                                 ],
@@ -188,6 +210,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         child: Column(
                           children: [
                             _buildFloatingButton(Icons.favorite, true, colorScheme, onTap: () {
+                              final existingIndex = globalWishlistItems.indexWhere((item) => item.title == title);
+                              if (existingIndex < 0) {
+                                globalWishlistItems.add(
+                                  WishlistItemData(
+                                    imageUrl: imageUrl,
+                                    title: title,
+                                    price: price,
+                                    subtitle: 'Category â€¢ Color', // Could be made more dynamic if needed
+                                  ),
+                                );
+                              }
                               context.push('/wishlist');
                             }),
                             const SizedBox(height: 12),
@@ -217,7 +250,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'A masterclass in minimalist tailoring. This overcoat is crafted from ethically sourced virgin wool with a subtle satin lining. Featuring dropped shoulders and a hidden button placket for a clean, architectural silhouette that transcends seasonal trends.',
+                        _description,
                         style: textTheme.bodyMedium?.copyWith(
                           color: const Color(0xFF504441),
                           height: 1.8,
@@ -355,7 +388,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        colorScheme.surfaceDim.withOpacity(0.2),
+                        colorScheme.surfaceDim.withValues(alpha: 0.2),
                       ],
                     ),
                   ),
@@ -372,74 +405,84 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       const SizedBox(height: 32),
 
                       // Trousers Card
-                      AspectRatio(
-                        aspectRatio: 3 / 4,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Image.network(
-                                'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
-                                fit: BoxFit.cover,
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Colors.black.withOpacity(0.6),
-                                      Colors.transparent,
-                                      Colors.transparent,
+                      InkWell(
+                        onTap: () {
+                          context.push('/product_details', extra: {
+                            'title': 'Premium Pleated Trousers',
+                            'price': 'LKR 4500',
+                            'label': 'Premium',
+                            'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
+                          });
+                        },
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
+                                  fit: BoxFit.cover,
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        Colors.black.withValues(alpha: 0.6),
+                                        Colors.transparent,
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 24,
+                                  left: 24,
+                                  right: 24,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Premium Pleated Trousers',
+                                              style: textTheme.labelLarge?.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'LKR 4500',
+                                              style: textTheme.labelSmall?.copyWith(
+                                                color: Colors.white.withValues(alpha: 0.8),
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.add, color: colorScheme.primary),
+                                      ),
                                     ],
                                   ),
                                 ),
-                              ),
-                              Positioned(
-                                bottom: 24,
-                                left: 24,
-                                right: 24,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Premium Pleated Trousers',
-                                            style: textTheme.labelLarge?.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'LKR 4500',
-                                            style: textTheme.labelSmall?.copyWith(
-                                              color: Colors.white.withOpacity(0.8),
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(Icons.add, color: colorScheme.primary),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -457,12 +500,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
                                 fit: BoxFit.cover,
                               ),
-                              Container(color: Colors.black.withOpacity(0.2)),
+                              Container(color: Colors.black.withValues(alpha: 0.2)),
                               Center(
                                 child: Text(
                                   'EST. 1924',
                                   style: textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 4.0,
                                     fontSize: 10,
@@ -479,7 +522,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Container(
                         padding: const EdgeInsets.all(32),
                         decoration: BoxDecoration(
-                          color: colorScheme.outline.withOpacity(0.1),
+                          color: colorScheme.outline.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Column(
@@ -524,10 +567,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     border: Border(
                       top: BorderSide(
-                        color: colorScheme.outlineVariant.withOpacity(0.1),
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.1),
                       ),
                     ),
                   ),
@@ -542,7 +585,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: colorScheme.secondary.withOpacity(0.3),
+                          color: colorScheme.secondary.withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -550,6 +593,30 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                     child: ElevatedButton(
                       onPressed: () {
+                        final priceStr = price.replaceAll(RegExp(r'[^0-9]'), '');
+                        final unitPrice = int.tryParse(priceStr) ?? 0;
+                        
+                        final existingIndex = globalCartItems.indexWhere((item) => item.title == title);
+                        if (existingIndex >= 0) {
+                          globalCartItems[existingIndex].quantity++;
+                        } else {
+                          // Simple mapping to get color name from hex
+                          String colorName = 'Selected Color';
+                          if (_colors[_selectedColorIndex].value == const Color(0xFF0D1B2A).value) colorName = 'Midnight Blue';
+                          if (_colors[_selectedColorIndex].value == const Color(0xFF5D675B).value) colorName = 'Olive Green';
+                          if (_colors[_selectedColorIndex].value == const Color(0xFFE5E2DD).value) colorName = 'Cream White';
+                          if (_colors[_selectedColorIndex].value == const Color(0xFF704225).value) colorName = 'Espresso Brown';
+
+                          globalCartItems.add(
+                            CartItem(
+                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                              imageUrl: imageUrl,
+                              title: title,
+                              subtitle: '$colorName / ${_sizes[_selectedSizeIndex]}',
+                              unitPrice: unitPrice,
+                            ),
+                          );
+                        }
                         context.push('/cart');
                       },
                       style: ElevatedButton.styleFrom(
@@ -591,7 +658,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

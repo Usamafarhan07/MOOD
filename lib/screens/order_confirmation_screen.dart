@@ -12,7 +12,7 @@ class OrderConfirmationScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: false,
       extendBody: true,
       appBar: PreferredSize(
@@ -21,7 +21,7 @@ class OrderConfirmationScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back, color: colorScheme.primary),
@@ -76,7 +76,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: colorScheme.background,
+                        color: colorScheme.surface,
                         shape: BoxShape.circle,
                       ),
                       child: Container(
@@ -126,7 +126,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.05),
+                    color: colorScheme.primary.withValues(alpha: 0.05),
                     blurRadius: 30,
                     offset: const Offset(0, 4),
                   ),
@@ -137,7 +137,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                   Text(
                     'CONFIRMATION NUMBER',
                     style: textTheme.labelSmall?.copyWith(
-                      color: colorScheme.primary.withOpacity(0.6),
+                      color: colorScheme.primary.withValues(alpha: 0.6),
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2.0,
                       fontSize: 10,
@@ -155,7 +155,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                   Container(
                     width: 48,
                     height: 1,
-                    color: colorScheme.primary.withOpacity(0.1),
+                    color: colorScheme.primary.withValues(alpha: 0.1),
                   ),
                   const SizedBox(height: 24),
 
@@ -242,7 +242,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.secondary.withOpacity(0.2),
+                    color: colorScheme.secondary.withValues(alpha: 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),

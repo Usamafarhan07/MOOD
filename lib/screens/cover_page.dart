@@ -24,7 +24,7 @@ class CoverPage extends StatelessWidget {
 
           // Subtle overlay for depth
           Container(
-            color: colorScheme.surface.withOpacity(0.30),
+            color: colorScheme.surface.withValues(alpha: 0.30),
           ),
 
           // Header
@@ -70,7 +70,7 @@ class CoverPage extends StatelessWidget {
                       fontSize: 10,
                       letterSpacing: 5.0,
                       fontWeight: FontWeight.bold,
-                      color: colorScheme.primary.withOpacity(0.6),
+                      color: colorScheme.primary.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -111,7 +111,7 @@ class CoverPage extends StatelessWidget {
                       fontSize: 20,
                       fontWeight: FontWeight.normal,
                       fontStyle: FontStyle.italic,
-                      color: colorScheme.primary.withOpacity(0.7),
+                      color: colorScheme.primary.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -123,7 +123,7 @@ class CoverPage extends StatelessWidget {
                       'Experience a minimalist approach to luxury. A sanctuary of style defined by simplicity and impeccable craftsmanship.',
                       textAlign: TextAlign.center,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.primary.withOpacity(0.7),
+                        color: colorScheme.primary.withValues(alpha: 0.7),
                         fontSize: 14,
                         fontWeight: FontWeight.w300,
                         height: 1.6,
@@ -144,7 +144,7 @@ class CoverPage extends StatelessWidget {
                         backgroundColor: colorScheme.primary,
                         foregroundColor: Colors.white,
                         elevation: 8,
-                        shadowColor: colorScheme.primary.withOpacity(0.3),
+                        shadowColor: colorScheme.primary.withValues(alpha: 0.3),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 56,
                           vertical: 24,

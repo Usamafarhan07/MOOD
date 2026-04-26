@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -145,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Expanded(
                           child: Divider(
-                            color: colorScheme.outlineVariant.withOpacity(0.3),
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                           ),
                         ),
                         Padding(
@@ -156,13 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 2.0,
-                              color: const Color(0xFF504441).withOpacity(0.6),
+                              color: const Color(0xFF504441).withValues(alpha: 0.6),
                             ),
                           ),
                         ),
                         Expanded(
                           child: Divider(
-                            color: colorScheme.outlineVariant.withOpacity(0.3),
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                           ),
                         ),
                       ],
@@ -229,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF504441).withOpacity(0.4),
+              color: const Color(0xFF504441).withValues(alpha: 0.4),
             ),
             filled: true,
             fillColor: const Color(0xFFEBE8E3), // surface-container-high
@@ -289,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             hintText: '••••••••',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF504441).withOpacity(0.4),
+              color: const Color(0xFF504441).withValues(alpha: 0.4),
             ),
             filled: true,
             fillColor: const Color(0xFFEBE8E3),
@@ -307,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _obscurePassword
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: const Color(0xFF504441).withOpacity(0.5),
+                      color: const Color(0xFF504441).withValues(alpha: 0.5),
                     ),
                     onPressed: () {
                       setState(() {
@@ -386,7 +385,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontSize: 10,
                   letterSpacing: 1.5,
-                  color: theme.colorScheme.primary.withOpacity(0.7),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.7),
                 ),
               ),
               InkWell(
@@ -401,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     letterSpacing: 1.5,
                     color: theme.colorScheme.primary,
                     decoration: TextDecoration.underline,
-                    decorationColor: theme.colorScheme.secondary.withOpacity(
+                    decorationColor: theme.colorScheme.secondary.withValues(alpha: 
                       0.3,
                     ),
                   ),
@@ -415,7 +414,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: theme.textTheme.labelSmall?.copyWith(
               fontSize: 9,
               letterSpacing: 1.5,
-              color: theme.colorScheme.primary.withOpacity(0.4),
+              color: theme.colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -431,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
         style: theme.textTheme.labelSmall?.copyWith(
           fontSize: 12,
           letterSpacing: 1.5,
-          color: theme.colorScheme.primary.withOpacity(0.5),
+          color: theme.colorScheme.primary.withValues(alpha: 0.5),
         ),
       ),
     );

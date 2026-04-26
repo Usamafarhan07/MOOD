@@ -23,6 +23,8 @@ class CartItem {
   String get formattedUnitPrice => 'LKR ${unitPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
 }
 
+final List<CartItem> globalCartItems = [];
+
 class ShoppingCartScreen extends StatefulWidget {
   const ShoppingCartScreen({super.key});
 
@@ -31,22 +33,13 @@ class ShoppingCartScreen extends StatefulWidget {
 }
 
 class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
-  final List<CartItem> _cartItems = [
-    CartItem(
-      id: '1',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0',
-      title: 'Toscana Leather Boot',
-      subtitle: 'Charcoal / Large',
-      unitPrice: 15000,
-    ),
-    CartItem(
-      id: '2',
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBMUsOVK5586ugPu3o1MdOGJbNUMrG5NvKdaWTjjEdhx20eErWWVa7NhS4x8noiijv70IH9zmlrX8JKbQiYu3Wxf2XXyL5g5IHsH17OvQPhNyotZ0fBtjqI5yUgNcyUaMP0MGD-PcvMVhTffW6u3ohAv06IohYSG236Fgey4RSxeGYgygJIkw3muKEKLLoomGEoPXp-lMUexu2Zd-ceS_KI6BlzDQxxeoWyvgxTIrlpHmGnRQJ93sHq6pYt8oMQrqOTMjddAy7OaSg',
-      title: 'Wool Coat',
-      subtitle: 'Siren Red / 10.5',
-      unitPrice: 9000,
-    ),
-  ];
+  late List<CartItem> _cartItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _cartItems = globalCartItems;
+  }
 
   int get _subtotal => _cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
   int get _total => _subtotal; // Free shipping
@@ -84,6 +77,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           label: 'UNDO',
           textColor: const Color(0xFFFE8763),
           onPressed: () {
+            if (!mounted) return;
             setState(() {
               _cartItems.insert(index, removedItem);
             });
@@ -100,7 +94,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: false,
       extendBody: true,
       appBar: PreferredSize(
@@ -109,7 +103,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back, color: colorScheme.primary),
@@ -287,7 +281,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: colorScheme.secondary.withOpacity(0.2),
+                                color: colorScheme.secondary.withValues(alpha: 0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -343,11 +337,11 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.9),
+          color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.05),
+              color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
               offset: const Offset(0, -4),
             ),
@@ -391,7 +385,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           Icon(
             Icons.shopping_bag_outlined,
             size: 80,
-            color: theme.colorScheme.primary.withOpacity(0.2),
+            color: theme.colorScheme.primary.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 24),
           Text(
@@ -528,7 +522,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                           height: 28,
                           decoration: BoxDecoration(
                             color: item.quantity > 1
-                                ? theme.colorScheme.primary.withOpacity(0.1)
+                                ? theme.colorScheme.primary.withValues(alpha: 0.1)
                                 : Colors.transparent,
                             shape: BoxShape.circle,
                           ),
@@ -538,7 +532,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: item.quantity > 1
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.primary.withOpacity(0.3),
+                                  : theme.colorScheme.primary.withValues(alpha: 0.3),
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -560,7 +554,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
@@ -593,7 +587,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -603,7 +597,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],

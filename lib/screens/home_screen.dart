@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/wishlist_screen.dart';
 import 'dart:ui';
 
 class HomeScreen extends StatefulWidget {
@@ -11,6 +12,33 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String _searchQuery = '';
+  final List<Map<String, String>> _homeProducts = [
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNHN-xw2EVV9V-z1_pQatvYZqGsqw40CKM6zOVcE1rCKB5-hXd8_RkCGUl_0HVwDHFB1z5DXVyhuu0V0fG4_85Ml857EYH-i_P7an0mnxpU8FhbOYwR1NlmAb-l-vJLDnnpjZqVKG2Y-Hg5WPvKRYWDD8nEHWm9HwwS7tLfrzBB2KAGq2PhnbYJrt7PrTNSc2U-FrpnD73r88Iu-B3-JNeQ_0c89NuNqRc5R2z_FsX-tVSP94vL-BQwID6rZlH1A8OtV11LSjr6xo',
+      'title': 'Structured Wool Coat',
+      'subtitle': 'Heritage Camel',
+      'price': 'LKR 9000',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuB3eFsuU50HyClxMBUzmgR62Lm-jHZG-z3xkj7yA7EyEFpJcSl90XikR03rpfyNdwScwUHIDLikHLUDRbqZFZwkzVujgupyDV_5DFUmYWkI005-5M7LeQFMtsxaDyeWCHCNfD1sMYwST1IiEeFoEWmo_Zl6-F--_QN7sogAcoddt80RgIGALgpGnLBpfWJUCE8OnRnD_jp8mPbDRZQAveMHhVBGgcyP3OrIksc73HCUpzGM8R8jzSpOpfqc99Pk_QtWaSic-lkdxB0',
+      'title': 'Noir Silk Slip',
+      'subtitle': 'Midnight Onyx',
+      'price': 'LKR 7500',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCSvPUh6-En9CMsWZFhpYp5yZA91x3tvC08WkNj28QBJPfSAUPnR3zz5kgGqYn3HpOlMsavlojLUySSV-nBtBqMKDroTMCmhj2HeeXgB9rUOKKF3A8o5FNVwOOEFG21W1JiwKqrgpEzpP7ixCnlTIgkNngzOX4HF7QoCVMXNUpJ-CJIjNSWOTk_4F-7_vt7TjMWtVujPtbzN4ppikNM70OYvXZcVUEYuLNTPwveVfkpRRzFGkvt1YSTr3Jj607frcXIu-P4m69GAMw',
+      'title': 'Noir Mini Bag',
+      'subtitle': 'Midnight Onyx',
+      'price': 'LKR 12,500',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDa7QWyyg1YDNcW2MypSJMRrw0zs-aTYyqicNeAPyj2gfLrCQNPZnQ_bZGznk75R3-pUsIORn9rYPp6-6YNAj-TE-9pcAlLIhOzQzMzcGuA9wE2tmb6el1ryXE4Az4mdokPBx7rjkTYTTmrYWFCPO6ZwbeB1vMwE4GsrXuNJGtzxo76sOgpH4xQ8qoIqMlYiFPExtu-4gkt5AhuI3IGdVZ5iYLg2ZftC0Z0_d03kALIRVrACFKmg0f_g94A8Bx1Skt0pdrrUov1aAY',
+      'title': 'Silk Tapered Trousers',
+      'subtitle': 'Desert Sand',
+      'price': 'LKR 6,800',
+    },
+  ];
   String _selectedCategory = 'Women';
 
   @override
@@ -28,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: AppBar(
-              backgroundColor: colorScheme.surface.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               leading: const SizedBox(width: 48),
               title: Text(
@@ -70,19 +98,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: const Color(0xFFF6F3EE),
                   borderRadius: BorderRadius.circular(50),
                   border: Border.all(
-                    color: const Color(0xFFD4C3BE).withOpacity(0.3),
+                    color: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.search, color: colorScheme.primary.withOpacity(0.45), size: 22),
+                    Icon(Icons.search, color: colorScheme.primary.withValues(alpha: 0.45), size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
                         decoration: InputDecoration(
                           hintText: 'Search products...',
                           hintStyle: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.primary.withOpacity(0.35),
+                            color: colorScheme.primary.withValues(alpha: 0.35),
                             letterSpacing: 0.3,
                           ),
                           border: InputBorder.none,
@@ -95,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(Icons.camera_alt_outlined, color: colorScheme.primary.withOpacity(0.45), size: 22),
+                    Icon(Icons.camera_alt_outlined, color: colorScheme.primary.withValues(alpha: 0.45), size: 22),
                   ],
                 ),
               ),
@@ -126,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                colorScheme.primary.withOpacity(0.6),
+                                colorScheme.primary.withValues(alpha: 0.6),
                                 Colors.transparent,
                                 Colors.transparent,
                               ],
@@ -153,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text(
                                 'A curated selection of timeless silhouettes for the digital modernist.',
                                 style: textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   fontSize: 18,
                                 ),
                               ),
@@ -169,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: colorScheme.secondary.withOpacity(0.2),
+                                      color: colorScheme.secondary.withValues(alpha: 0.2),
                                       blurRadius: 20,
                                       offset: const Offset(0, 8),
                                     ),
@@ -273,74 +306,71 @@ class _HomeScreenState extends State<HomeScreen> {
             // Product Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  // Row 1: Coat + Silk Slip (staggered)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNHN-xw2EVV9V-z1_pQatvYZqGsqw40CKM6zOVcE1rCKB5-hXd8_RkCGUl_0HVwDHFB1z5DXVyhuu0V0fG4_85Ml857EYH-i_P7an0mnxpU8FhbOYwR1NlmAb-l-vJLDnnpjZqVKG2Y-Hg5WPvKRYWDD8nEHWm9HwwS7tLfrzBB2KAGq2PhnbYJrt7PrTNSc2U-FrpnD73r88Iu-B3-JNeQ_0c89NuNqRc5R2z_FsX-tVSP94vL-BQwID6rZlH1A8OtV11LSjr6xo',
-                          title: 'Structured Wool Coat',
-                          subtitle: 'Heritage Camel',
-                          price: 'LKR 9000',
-                          isFavorite: true,
-                          theme: theme,
-                          context: context,
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 48.0),
-                          child: _buildProductCard(
-                            imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB3eFsuU50HyClxMBUzmgR62Lm-jHZG-z3xkj7yA7EyEFpJcSl90XikR03rpfyNdwScwUHIDLikHLUDRbqZFZwkzVujgupyDV_5DFUmYWkI005-5M7LeQFMtsxaDyeWCHCNfD1sMYwST1IiEeFoEWmo_Zl6-F--_QN7sogAcoddt80RgIGALgpGnLBpfWJUCE8OnRnD_jp8mPbDRZQAveMHhVBGgcyP3OrIksc73HCUpzGM8R8jzSpOpfqc99Pk_QtWaSic-lkdxB0',
-                            title: 'Noir Silk Slip',
-                            subtitle: 'Midnight Onyx',
-                            price: 'LKR 7500',
-                            isFavorite: false,
-                            theme: theme,
-                            context: context,
+              child: Builder(
+                builder: (context) {
+                  final filteredProducts = _homeProducts.where((product) {
+                    return product['title']!.toLowerCase().contains(_searchQuery.toLowerCase());
+                  }).toList();
+
+                  if (filteredProducts.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(40.0),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: Text(
+                          'No products found.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: const Color(0xFF827470),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  // Row 2: Mini Bag + Trousers (staggered)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCSvPUh6-En9CMsWZFhpYp5yZA91x3tvC08WkNj28QBJPfSAUPnR3zz5kgGqYn3HpOlMsavlojLUySSV-nBtBqMKDroTMCmhj2HeeXgB9rUOKKF3A8o5FNVwOOEFG21W1JiwKqrgpEzpP7ixCnlTIgkNngzOX4HF7QoCVMXNUpJ-CJIjNSWOTk_4F-7_vt7TjMWtVujPtbzN4ppikNM70OYvXZcVUEYuLNTPwveVfkpRRzFGkvt1YSTr3Jj607frcXIu-P4m69GAMw',
-                          title: 'Noir Mini Bag',
-                          subtitle: 'Midnight Onyx',
-                          price: 'LKR 12,500',
-                          isFavorite: false,
-                          theme: theme,
-                          context: context,
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 48.0),
-                          child: _buildProductCard(
-                            imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDa7QWyyg1YDNcW2MypSJMRrw0zs-aTYyqicNeAPyj2gfLrCQNPZnQ_bZGznk75R3-pUsIORn9rYPp6-6YNAj-TE-9pcAlLIhOzQzMzcGuA9wE2tmb6el1ryXE4Az4mdokPBx7rjkTYTTmrYWFCPO6ZwbeB1vMwE4GsrXuNJGtzxo76sOgpH4xQ8qoIqMlYiFPExtu-4gkt5AhuI3IGdVZ5iYLg2ZftC0Z0_d03kALIRVrACFKmg0f_g94A8Bx1Skt0pdrrUov1aAY',
-                            title: 'Silk Tapered Trousers',
-                            subtitle: 'Desert Sand',
-                            price: 'LKR 6,800',
-                            isFavorite: false,
-                            theme: theme,
-                            context: context,
+                    );
+                  }
+
+                  final List<Widget> rows = [];
+                  for (int i = 0; i < filteredProducts.length; i += 2) {
+                    rows.add(
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildProductCard(
+                              imageUrl: filteredProducts[i]['imageUrl']!,
+                              title: filteredProducts[i]['title']!,
+                              subtitle: filteredProducts[i]['subtitle']!,
+                              price: filteredProducts[i]['price']!,
+                              isFavorite: false,
+                              theme: theme,
+                              context: context,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: (i + 1 < filteredProducts.length)
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 48.0),
+                                    child: _buildProductCard(
+                                      imageUrl: filteredProducts[i + 1]['imageUrl']!,
+                                      title: filteredProducts[i + 1]['title']!,
+                                      subtitle: filteredProducts[i + 1]['subtitle']!,
+                                      price: filteredProducts[i + 1]['price']!,
+                                      isFavorite: false,
+                                      theme: theme,
+                                      context: context,
+                                    ),
+                                  )
+                                : const SizedBox(),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    );
+                    if (i + 2 < filteredProducts.length) {
+                      rows.add(const SizedBox(height: 40));
+                    }
+                  }
+                  
+                  return Column(children: rows);
+                },
               ),
             ),
             const SizedBox(height: 48),
@@ -411,14 +441,14 @@ class _HomeScreenState extends State<HomeScreen> {
       // Bottom Navigation
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.surface.withOpacity(0.9),
+          color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.05),
+              color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
               offset: const Offset(0, -4),
             ),
@@ -466,7 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.2),
+                  color: colorScheme.primary.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -496,7 +526,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     return GestureDetector(
       onTap: () {
-        context.push('/product_details');
+        context.push('/product_details', extra: {
+          'title': title,
+          'price': price,
+          'label': subtitle,
+          'imageUrl': imageUrl,
+        });
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,18 +557,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     Positioned(
                       top: 12,
                       right: 12,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
+                      child: _FavoriteButton(
+                        initialIsFavorite: isFavorite,
+                        theme: theme,
+                        title: title,
+                        price: price,
+                        imageUrl: imageUrl,
                       ),
                     ),
                   ],
@@ -598,7 +627,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -608,10 +637,100 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatefulWidget {
+  final bool initialIsFavorite;
+  final ThemeData theme;
+  final String title;
+  final String price;
+  final String imageUrl;
+
+  const _FavoriteButton({
+    required this.initialIsFavorite,
+    required this.theme,
+    required this.title,
+    required this.price,
+    required this.imageUrl,
+  });
+
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.initialIsFavorite;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+
+        final existingIndex = globalWishlistItems.indexWhere((item) => item.title == widget.title);
+
+        if (_isFavorite) {
+          if (existingIndex < 0) {
+            globalWishlistItems.add(
+              WishlistItemData(
+                imageUrl: widget.imageUrl,
+                title: widget.title,
+                price: widget.price,
+                subtitle: 'Category • Color',
+              ),
+            );
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Saved to Wishlist'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: widget.theme.colorScheme.primary,
+              duration: const Duration(seconds: 2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+        } else {
+          if (existingIndex >= 0) {
+            globalWishlistItems.removeAt(existingIndex);
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Removed from Wishlist'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: widget.theme.colorScheme.error,
+              duration: const Duration(seconds: 2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+        }
+      },
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.8),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          _isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: widget.theme.colorScheme.primary,
+          size: 20,
+        ),
       ),
     );
   }

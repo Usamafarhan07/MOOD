@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/shopping_cart_screen.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
   const OrderDetailsScreen({super.key});
@@ -11,8 +12,16 @@ class OrderDetailsScreen extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    final subtotal = globalCartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+    final delivery = 0; // COMPLIMENTARY
+    final total = subtotal + delivery;
+
+    String formatCurrency(int amount) {
+      return 'LKR ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: false,
       extendBody: true,
       appBar: PreferredSize(
@@ -21,7 +30,7 @@ class OrderDetailsScreen extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(1.0),
@@ -302,7 +311,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SELECTED PIECES (2)',
+                    'SELECTED PIECES (${globalCartItems.length})',
                     style: textTheme.labelSmall?.copyWith(
                       color: const Color(0xFF504441),
                       fontWeight: FontWeight.bold,
@@ -312,30 +321,28 @@ class OrderDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Item 1
-                  _buildOrderPiece(
-                    imageUrl:
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAA4a-kjBY4qKcUmF5ARkfLaufrQld3MCx574KqV3vJnUoJE58U8EJZQNj2qhqRrKoy29uOrlprvc-gRaEYr9OOXpOU99W_D65TSvPSXUxcDVywBpRoRk4mQlRLYJT6VvLwv6vfjEep40AszgXgpRWQ8wkVJQH7Bb3fXpUjV9BVLhJKHAu9vpQmqI1ss05HrVuqRhUFWqb6R1VnWsymMIwBOxZFE5OrVg_fFI2U4fY_GBhUsnQYwcMhXC187k198VWLQWo5GwpYGe4',
-                    title: 'Sculpted Wool Overcoat',
-                    price: 'LKR 9000',
-                    color: 'Midnight Black',
-                    size: 'M',
-                    quantity: '01',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Item 2
-                  _buildOrderPiece(
-                    imageUrl:
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0',
-                    title: 'Toscana Leather Boot',
-                    price: 'LKR 15,000',
-                    color: 'Espresso',
-                    size: '42',
-                    quantity: '01',
-                    theme: theme,
-                  ),
+                  if (globalCartItems.isEmpty)
+                    Text('No items in order', style: textTheme.bodyMedium)
+                  else
+                    ...globalCartItems.map((item) {
+                      // Extract color and size from subtitle (e.g. "Midnight Blue / M")
+                      final parts = item.subtitle.split(' / ');
+                      final colorStr = parts.isNotEmpty ? parts[0] : '';
+                      final sizeStr = parts.length > 1 ? parts[1] : '';
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 40),
+                        child: _buildOrderPiece(
+                          imageUrl: item.imageUrl,
+                          title: item.title,
+                          price: item.formattedPrice,
+                          color: colorStr,
+                          size: sizeStr,
+                          quantity: item.quantity.toString().padLeft(2, '0'),
+                          theme: theme,
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -365,7 +372,7 @@ class OrderDetailsScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'LKR 23,500',
+                          formatCurrency(subtotal),
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -411,7 +418,7 @@ class OrderDetailsScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'LKR 24,000',
+                          formatCurrency(total),
                           style: textTheme.headlineSmall?.copyWith(
                             color: colorScheme.primary,
                             fontWeight: FontWeight.w900,
@@ -443,7 +450,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: colorScheme.secondary.withOpacity(0.2),
+                          color: colorScheme.secondary.withValues(alpha: 0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -500,11 +507,11 @@ class OrderDetailsScreen extends StatelessWidget {
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.9),
+          color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.05),
+              color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
               offset: const Offset(0, -4),
             ),
@@ -710,7 +717,7 @@ class OrderDetailsScreen extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -720,7 +727,7 @@ class OrderDetailsScreen extends StatelessWidget {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],

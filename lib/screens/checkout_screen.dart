@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/shopping_cart_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -18,20 +19,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    final subtotal = globalCartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+    final delivery = 500;
+    final tax = (subtotal * 0.02).toInt(); // 2% dummy tax
+    final total = subtotal + delivery + tax;
+
+    String formatCurrency(int amount) {
+      return 'LKR ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: ClipRRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: colorScheme.background.withOpacity(0.8),
+              backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(1.0),
                 child: Container(
-                  color: colorScheme.outlineVariant.withOpacity(0.2),
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.2),
                   height: 1.0,
                 ),
               ),
@@ -194,7 +204,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -212,34 +222,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Item 1
-                  _buildSummaryItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNHN-xw2EVV9V-z1_pQatvYZqGsqw40CKM6zOVcE1rCKB5-hXd8_RkCGUl_0HVwDHFB1z5DXVyhuu0V0fG4_85Ml857EYH-i_P7an0mnxpU8FhbOYwR1NlmAb-l-vJLDnnpjZqVKG2Y-Hg5WPvKRYWDD8nEHWm9HwwS7tLfrzBB2KAGq2PhnbYJrt7PrTNSc2U-FrpnD73r88Iu-B3-JNeQ_0c89NuNqRc5R2z_FsX-tVSP94vL-BQwID6rZlH1A8OtV11LSjr6xo',
-                    title: 'Structured Wool Coat',
-                    subtitle: 'Heritage Camel / Medium',
-                    price: 'LKR 9000',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 24),
+                  if (globalCartItems.isEmpty)
+                    Text('No items in cart', style: textTheme.bodyMedium)
+                  else
+                    ...globalCartItems.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: _buildSummaryItem(
+                        imageUrl: item.imageUrl,
+                        title: item.title,
+                        subtitle: '${item.subtitle} / Qty: ${item.quantity}',
+                        price: item.formattedPrice,
+                        theme: theme,
+                      ),
+                    )),
                   
-                  // Item 2
-                  _buildSummaryItem(
-                    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCA16s8gU3Q3dVbA2ImRxW4SG_zISeO256rZS9mwcU8K_Zr-c4K7uDvrgTn--hItdF6VV9fnliWPHqQeFl3hnvhrngX_FFfBRKgbZqD6nR_0SvXDNsRD9gpYwodqNSJsMS6VG97RrkwMcCo9mNDUy-Lqp9MsMJQ8zU4PIFBRyCe6k670JLYUbFPJY9RwSCuVpuLxhEJvSofTCw1I7lZmx5gYtSarE0YDbic-MdGyTuuwVdqr09_9v4p3sJ7uVGhnoeR0rEmAp46JYM',
-                    title: 'Toscana Leather Boot',
-                    subtitle: 'Jet Black / 39',
-                    price: 'LKR 15,000',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 24),
 
                   // Cost Breakdown
-                  _buildCostRow('Subtotal', 'LKR 24,000', theme),
+                  _buildCostRow('Subtotal', formatCurrency(subtotal), theme),
                   const SizedBox(height: 12),
-                  _buildCostRow('Delivery', 'LKR 200', theme),
+                  _buildCostRow('Delivery', formatCurrency(delivery), theme),
                   const SizedBox(height: 12),
-                  _buildCostRow('Tax', 'LKR 20', theme),
+                  _buildCostRow('Tax', formatCurrency(tax), theme),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -252,7 +257,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                       Text(
-                        'LKR 24,220',
+                        formatCurrency(total),
                         style: textTheme.headlineSmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -266,9 +271,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colorScheme.background,
+                      color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
+                      border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                     ),
                     child: Row(
                       children: [
@@ -277,7 +282,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             decoration: InputDecoration(
                               hintText: 'Promo Code',
                               hintStyle: textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF827470).withOpacity(0.5),
+                                color: const Color(0xFF827470).withValues(alpha: 0.5),
                               ),
                               border: InputBorder.none,
                             ),
@@ -336,7 +341,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 ),
                 Text(
-                  'LKR 24,220',
+                  formatCurrency(total),
                   style: textTheme.displaySmall?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
@@ -358,7 +363,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.secondary.withOpacity(0.2),
+                    color: colorScheme.secondary.withValues(alpha: 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -424,14 +429,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: const Color(0xFFD4C3BE).withOpacity(0.4),
+              color: const Color(0xFFD4C3BE).withValues(alpha: 0.4),
             ),
           ),
           child: TextField(
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF827470).withOpacity(0.6),
+                color: const Color(0xFF827470).withValues(alpha: 0.6),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -546,7 +551,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           color: isSelected ? Colors.white : theme.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.5),
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
         ),

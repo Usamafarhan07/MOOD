@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/screens/wishlist_screen.dart';
 
 class ProductListingScreen extends StatefulWidget {
   const ProductListingScreen({super.key});
@@ -11,6 +12,34 @@ class ProductListingScreen extends StatefulWidget {
 
 class _ProductListingScreenState extends State<ProductListingScreen> {
   String _selectedFilter = 'All Items';
+  String _searchQuery = '';
+
+  final List<Map<String, String>> _allProducts = [
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDymoKsAIvfdQ7KBLyLjqEaQepNjxtekA0M1wkEML8FcEeKpVqGkpxpuDGpw1dcwQ_n-1PQxdPPjGSwqnEMOUJDIXyK9WBgy9453nH4XXtw54vEM821IgkacaJ7Zmj0NIX-acZPl561lZQanQWLmm26kI43927VjM1fAIMuA7DA5GtvdlGoPfHnFTXYE67upgPLlybmXTCip4ktZhWpYrhk1tsrLJp86XWda4pkdbp5wjiEuPItGUmbD2SaVnJehFDYI-eJT6AyXd4',
+      'label': 'Essentials',
+      'title': 'Sculpted Wool Coat',
+      'price': 'LKR 9000',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuALvSkFfwTFYIKZ5Z5Nt4NNz-9nKGDEZ_gNjMlE4284bwR19QiJ-bLpwwB-vYMvXGmJdkqjO1fYlAwGbEwFU2rr2JQgHXEpF3SWkVIhsp41mSr6vzfPg3H5P7xtbgtzjfqZdr7VGFBBKJSn2-hTD0ef2YBvR3NNq8pGAe62EYNzxEv-m7JxE6qYMjGPH0H4NIqa0Fz2DJkKSOIkRkAVTbjm9ggaHN-6FpOSabg0KROZCKTxpFEXF0w61ufEhryJyIN3fGYYGhdUINA',
+      'label': 'New Arrival',
+      'title': 'Silk Drape Top',
+      'price': 'LKR 6990',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuANi3-qQOrGpGZpeLcS6CQ9c7GMLX8eIZ3nTheqoi831NEfpT5i5yAMEShgZNYqVhUm7yZbVtbLAY8LP9PAW4FtOSOGdLIYVtfi8Alt0YkPxhh8VXDWF7Mq9DFyrxPvWxJcOx44FnFd7uiyd0gvH4N-tqzNzqhqz9WBRK0vESkAcMVsGLRGEE5rtuECZdu45zUdoRShhcGcdQ5sZEg8Fwbw-FoniULYqpQN_v8_vsNAZO3iuS804ZJ12avik22-U7RJNTakZDI6Jrw',
+      'label': 'Premium Collection',
+      'title': 'Pleated Wide-Leg Trousers',
+      'price': 'LKR 7590',
+    },
+    {
+      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDrXPQMd0cWdf_VeA4FlGE9ITGmurdStBOWg1lx5PgxWQQX8kYjrUAY7fH-D2sQhyIM-mvA1LGS7XYe7b-TPu8-ZsSrd63TxVabHWilJ2nLHke7e65x7I3NygeVLopjRK-tcBcRSGlBai7IM3a4xi7NMw1zqyOwc0fGDT9_B5hui4kI9saP8h9x0WevK0u4u_HyGVKhZuxvGq-F5ez_sWiZqLcPtsgJ6oko5UFxik27BuEKP4b3blRTo9Zeg8bC2lajE-MxFnx1_YA',
+      'label': 'Knitwear',
+      'title': 'Toscana Leather Boot',
+      'price': 'LKR 15,000',
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +48,11 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       extendBodyBehindAppBar: false,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: colorScheme.background,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: colorScheme.primary),
@@ -100,19 +129,24 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         color: const Color(0xFFF6F3EE),
                         borderRadius: BorderRadius.circular(50),
                         border: Border.all(
-                          color: const Color(0xFFD4C3BE).withOpacity(0.3),
+                          color: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.search, color: colorScheme.primary.withOpacity(0.45), size: 22),
+                          Icon(Icons.search, color: colorScheme.primary.withValues(alpha: 0.45), size: 22),
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
                               decoration: InputDecoration(
                                 hintText: 'Search products...',
                                 hintStyle: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.primary.withOpacity(0.35),
+                                  color: colorScheme.primary.withValues(alpha: 0.35),
                                   letterSpacing: 0.3,
                                 ),
                                 border: InputBorder.none,
@@ -136,10 +170,10 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                       color: const Color(0xFFF6F3EE),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: const Color(0xFFD4C3BE).withOpacity(0.3),
+                        color: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                       ),
                     ),
-                    child: Icon(Icons.tune_outlined, color: colorScheme.primary.withOpacity(0.6), size: 22),
+                    child: Icon(Icons.tune_outlined, color: colorScheme.primary.withValues(alpha: 0.6), size: 22),
                   ),
                 ],
               ),
@@ -173,59 +207,44 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final itemWidth = (constraints.maxWidth - 16) / 2;
+                  final filteredProducts = _allProducts.where((product) {
+                    final matchesFilter = _selectedFilter == 'All Items' || product['label'] == _selectedFilter;
+                    final matchesSearch = product['title']!.toLowerCase().contains(_searchQuery.toLowerCase());
+                    return matchesFilter && matchesSearch;
+                  }).toList();
+
+                  if (filteredProducts.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(40.0),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: Text(
+                          'No products found.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: const Color(0xFF827470),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
                   return Wrap(
                     spacing: 16,
                     runSpacing: 40,
-                    children: [
-                      SizedBox(
+                    children: filteredProducts.map((product) {
+                      return SizedBox(
                         width: itemWidth,
                         child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDymoKsAIvfdQ7KBLyLjqEaQepNjxtekA0M1wkEML8FcEeKpVqGkpxpuDGpw1dcwQ_n-1PQxdPPjGSwqnEMOUJDIXyK9WBgy9453nH4XXtw54vEM821IgkacaJ7Zmj0NIX-acZPl561lZQanQWLmm26kI43927VjM1fAIMuA7DA5GtvdlGoPfHnFTXYE67upgPLlybmXTCip4ktZhWpYrhk1tsrLJp86XWda4pkdbp5wjiEuPItGUmbD2SaVnJehFDYI-eJT6AyXd4',
-                          label: 'Essentials',
-                          title: 'Sculpted Wool Coat',
-                          price: 'LKR 9000',
-                          isFavorite: false,
+                          imageUrl: product['imageUrl']!,
+                          label: product['label']!,
+                          title: product['title']!,
+                          price: product['price']!,
+                          isFavorite: false, // Could integrate with globalWishlistItems here if desired
                           theme: theme,
                           context: context,
                         ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuALvSkFfwTFYIKZ5Z5Nt4NNz-9nKGDEZ_gNjMlE4284bwR19QiJ-bLpwwB-vYMvXGmJdkqjO1fYlAwGbEwFU2rr2JQgHXEpF3SWkVIhsp41mSr6vzfPg3H5P7xtbgtzjfqZdr7VGFBBKJSn2-hTD0ef2YBvR3NNq8pGAe62EYNzxEv-m7JxE6qYMjGPH0H4NIqa0Fz2DJkKSOIkRkAVTbjm9ggaHN-6FpOSabg0KROZCKTxpFEXF0w61ufEhryJyIN3fGYYGhdUINA',
-                          label: 'New Arrival',
-                          title: 'Silk Drape Top',
-                          price: 'LKR 6990',
-                          isFavorite: false,
-                          theme: theme,
-                          context: context,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANi3-qQOrGpGZpeLcS6CQ9c7GMLX8eIZ3nTheqoi831NEfpT5i5yAMEShgZNYqVhUm7yZbVtbLAY8LP9PAW4FtOSOGdLIYVtfi8Alt0YkPxhh8VXDWF7Mq9DFyrxPvWxJcOx44FnFd7uiyd0gvH4N-tqzNzqhqz9WBRK0vESkAcMVsGLRGEE5rtuECZdu45zUdoRShhcGcdQ5sZEg8Fwbw-FoniULYqpQN_v8_vsNAZO3iuS804ZJ12avik22-U7RJNTakZDI6Jrw',
-                          label: 'Premium Collection',
-                          title: 'Pleated Wide-Leg Trousers',
-                          price: 'LKR 7590',
-                          isFavorite: false,
-                          theme: theme,
-                          context: context,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _buildProductCard(
-                          imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDrXPQMd0cWdf_VeA4FlGE9ITGmurdStBOWg1lx5PgxWQQX8kYjrUAY7fH-D2sQhyIM-mvA1LGS7XYe7b-TPu8-ZsSrd63TxVabHWilJ2nLHke7e65x7I3NygeVLopjRK-tcBcRSGlBai7IM3a4xi7NMw1zqyOwc0fGDT9_B5hui4kI9saP8h9x0WevK0u4u_HyGVKhZuxvGq-F5ez_sWiZqLcPtsgJ6oko5UFxik27BuEKP4b3blRTo9Zeg8bC2lajE-MxFnx1_YA',
-                          label: 'Knitwear',
-                          title: 'Toscana Leather Boot',
-                          price: 'LKR 15,000',
-                          isFavorite: true,
-                          theme: theme,
-                          context: context,
-                        ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   );
                 },
               ),
@@ -252,7 +271,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                             colors: [
-                              colorScheme.primary.withOpacity(0.6),
+                              colorScheme.primary.withValues(alpha: 0.6),
                               Colors.transparent,
                             ],
                           ),
@@ -267,7 +286,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                             Text(
                               'Featured Series',
                               style: textTheme.labelSmall?.copyWith(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 fontSize: 10,
                                 letterSpacing: 1.5,
                               ),
@@ -293,7 +312,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colorScheme.secondary.withOpacity(0.2),
+                                    color: colorScheme.secondary.withValues(alpha: 0.2),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -335,11 +354,11 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
       // Bottom Navigation Bar (reusing style from Home)
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.background.withOpacity(0.9),
+          color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.05),
+              color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
               offset: const Offset(0, -4),
             ),
@@ -386,7 +405,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 )
@@ -416,7 +435,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
   }) {
     return InkWell(
       onTap: () {
-        context.push('/product_details');
+        context.push('/product_details', extra: {
+          'title': title,
+          'price': price,
+          'label': label,
+          'imageUrl': imageUrl,
+        });
       },
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,28 +460,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               Positioned(
                 top: 12,
                 right: 12,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
-                    shape: BoxShape.circle,
-                  ),
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? theme.colorScheme.primary : theme.colorScheme.primary,
-                          size: 18,
-                        ),
-                        onPressed: () {
-                          context.push('/wishlist');
-                        },
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-                    ),
-                  ),
+                child: _FavoriteButton(
+                  initialIsFavorite: isFavorite,
+                  theme: theme,
+                  title: title,
+                  price: price,
+                  imageUrl: imageUrl,
                 ),
               ),
             ],
@@ -489,7 +497,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
             fontSize: 14,
-            color: theme.colorScheme.primary.withOpacity(0.8),
+            color: theme.colorScheme.primary.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -505,7 +513,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -515,10 +523,105 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withOpacity(0.4),
+              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatefulWidget {
+  final bool initialIsFavorite;
+  final ThemeData theme;
+  final String title;
+  final String price;
+  final String imageUrl;
+
+  const _FavoriteButton({
+    required this.initialIsFavorite,
+    required this.theme,
+    required this.title,
+    required this.price,
+    required this.imageUrl,
+  });
+
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.initialIsFavorite;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: widget.theme.colorScheme.primary,
+              size: 18,
+            ),
+            onPressed: () {
+              setState(() {
+                _isFavorite = !_isFavorite;
+              });
+
+              final existingIndex = globalWishlistItems.indexWhere((item) => item.title == widget.title);
+
+              if (_isFavorite) {
+                if (existingIndex < 0) {
+                  globalWishlistItems.add(
+                    WishlistItemData(
+                      imageUrl: widget.imageUrl,
+                      title: widget.title,
+                      price: widget.price,
+                      subtitle: 'Category • Color',
+                    ),
+                  );
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Saved to Wishlist'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: widget.theme.colorScheme.primary,
+                    duration: const Duration(seconds: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              } else {
+                if (existingIndex >= 0) {
+                  globalWishlistItems.removeAt(existingIndex);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Removed from Wishlist'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: widget.theme.colorScheme.error,
+                    duration: const Duration(seconds: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              }
+            },
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(8),
+          ),
+        ),
       ),
     );
   }
