@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -11,8 +12,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _hasPasswordText = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -30,8 +33,74 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showSnackBar(String message) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty) {
+      return _showSnackBar('Email cannot be empty.');
+    }
+
+    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,}");
+    if (!emailRegex.hasMatch(email)) {
+      return _showSnackBar('Please enter a valid email address.');
+    }
+
+    if (password.isEmpty) {
+      return _showSnackBar('Password cannot be empty.');
+    }
+
+    if (password.length < 6) {
+      return _showSnackBar('Password must be at least 6 characters.');
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      final message = switch (error.code) {
+        'invalid-email' => 'That email address is invalid.',
+        'user-disabled' => 'This user account has been disabled.',
+        'user-not-found' => 'No account found with that email.',
+        'wrong-password' => 'Incorrect password. Please try again.',
+        'too-many-requests' => 'Too many attempts. Please try again later.',
+        _ => 'Login failed. Please check your credentials and try again.',
+      };
+      await _showSnackBar(message);
+    } catch (_) {
+      await _showSnackBar('Login failed. Please try again later.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   final String _googleSvg = '''
@@ -102,6 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Login Form
                     _buildTextField(
+                      controller: _emailController,
                       label: 'EMAIL ADDRESS',
                       hint: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
@@ -115,9 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          context.go('/home');
-                        },
+                        onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5D4037),
                           foregroundColor: Colors.white,
@@ -127,14 +195,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
-                          'LOGIN',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.4,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'LOGIN',
+                                style: textTheme.labelMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.4,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 40),
@@ -200,6 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildTextField({
+    required TextEditingController controller,
     required String label,
     required String hint,
     required ThemeData theme,
@@ -221,6 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         TextFormField(
+          controller: controller,
           keyboardType: keyboardType,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface,

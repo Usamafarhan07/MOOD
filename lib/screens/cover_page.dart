@@ -35,20 +35,15 @@ class CoverPage extends StatelessWidget {
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 48),
-                    Text(
-                      'MOOD',
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 6.0,
-                        color: colorScheme.primary,
-                      ),
+                child: Center(
+                  child: Text(
+                    'MOOD',
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 6.0,
+                      color: colorScheme.primary,
                     ),
-                    const SizedBox(width: 48),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -56,12 +51,13 @@ class CoverPage extends StatelessWidget {
 
           // Content Overlay
           Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 80),
+
 
                   // Tagline
                   Text(

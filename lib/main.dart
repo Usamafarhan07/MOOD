@@ -1,21 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mood/router/app_router.dart';
 import 'package:mood/theme/app_theme.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const MoodApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final router = createAppRouter();
+  runApp(MyApp(router: router));
 }
 
-class MoodApp extends StatelessWidget {
-  const MoodApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key, required this.router});
+
+  final GoRouter router;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Aura de Luxe',
-      theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppTheme.themeModeNotifier,
+      builder: (context, currentMode, _) {
+        return MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          routerConfig: router,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: currentMode,
+        );
+      },
     );
   }
 }

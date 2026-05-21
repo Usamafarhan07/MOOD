@@ -1,15 +1,68 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:mood/services/firestore_service.dart';
 
-class OrderConfirmationScreen extends StatelessWidget {
-  const OrderConfirmationScreen({super.key});
+class OrderConfirmationScreen extends StatefulWidget {
+  const OrderConfirmationScreen({super.key, required this.orderId});
+
+  final String orderId;
+
+  @override
+  State<OrderConfirmationScreen> createState() =>
+      _OrderConfirmationScreenState();
+}
+
+class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  Order? _order;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.orderId.isEmpty) {
+      _errorMessage = 'Order ID is missing.';
+    } else {
+      _loadOrder();
+    }
+  }
+
+  Future<void> _loadOrder() async {
+    try {
+      final order = await _firestoreService.getOrder(widget.orderId);
+      if (mounted) {
+        setState(() {
+          _order = order;
+          _errorMessage = order == null ? 'Order not found.' : null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Unable to load this order.');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text(_errorMessage!)),
+      );
+    }
+
+    if (_order == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final order = _order!;
+    final orderReference = '#${order.orderId.substring(0, 8).toUpperCase()}';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -23,16 +76,7 @@ class OrderConfirmationScreen extends StatelessWidget {
             child: AppBar(
               backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
               elevation: 0,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: colorScheme.primary),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/home');
-                  }
-                },
-              ),
+              automaticallyImplyLeading: false,
               title: Text(
                 'MOOD',
                 style: textTheme.headlineSmall?.copyWith(
@@ -42,21 +86,17 @@ class OrderConfirmationScreen extends StatelessWidget {
                 ),
               ),
               centerTitle: true,
-              actions: [
-                IconButton(
-                  icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
-                  onPressed: () {
-                    context.push('/notifications');
-                  },
-                ),
-                const SizedBox(width: 8),
-              ],
             ),
           ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(32, 40, 32, 120), // Bottom padding for nav
+        padding: const EdgeInsets.fromLTRB(
+          32,
+          40,
+          32,
+          120,
+        ), // Bottom padding for nav
         child: Column(
           children: [
             // Hero Illustration
@@ -124,7 +164,7 @@ class OrderConfirmationScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
+                boxShadow: <BoxShadow>[
                   BoxShadow(
                     color: colorScheme.primary.withValues(alpha: 0.05),
                     blurRadius: 30,
@@ -145,7 +185,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '#ATL-8829-0142',
+                    orderReference,
                     style: textTheme.headlineSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -164,45 +204,49 @@ class OrderConfirmationScreen extends StatelessWidget {
                     height: 56,
                     child: Stack(
                       alignment: Alignment.center,
-                      children: [
-                        // Item 1
-                        Positioned(
-                          left: MediaQuery.of(context).size.width * 0.25 - 42,
-                          child: _buildThumbnail(
-                            'https://lh3.googleusercontent.com/aida-public/AB6AXuBIL1AAphMevMJzfStXpzxoyxKJWTQ1yk5R4O18_ItwtljIidvbnZk0VWEggvwLh6SFwvsMMFH4szB-SEf7fZDO4viFeYQ3wdiWiXGGt1UPVHHUzcU3XbjOrFIN8iVc70FYSaoSF0w4IXII1BTX2BkxJkRGi_UErl0Q_-9JReIYubkslrlgRmJiOWt0hJ80XAA42ZPRq9DtOz8LZLhQeJrxFR3HGllF_xbyUKpdQNO0LjM50btkeBFl38carp7ipz48q97HKW660uU',
-                            theme,
-                          ),
-                        ),
-                        // Item 2
-                        Positioned(
-                          left: MediaQuery.of(context).size.width * 0.25 - 10,
-                          child: _buildThumbnail(
-                            'https://lh3.googleusercontent.com/aida-public/AB6AXuBlKhhOoB329QjjJyu9raaPQHMcXi7padY4kJ9WMx6JuukcGvXUgp529_G5dqw8EBxOBK4YEuImtnnm0oDA14qXYPWufbukb-CEnq5ems29o3811cw65bvn5UclPZ65H2WWMR5hZDeh6PzsoAtZ_0NvUz_h2mt081_gAlKSvv8ZAzY5zkmKalj_gc_f3HXjNWmqOqS2ooBDUmWNru1tvN4wL5S2szm9RGCKyIam5QHPKuB68EZ47oqZBWWNHnvBs9LeBUU5c1vy5fM',
-                            theme,
-                          ),
-                        ),
-                        // Count Badge
-                        Positioned(
-                          left: MediaQuery.of(context).size.width * 0.25 + 22,
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainer,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: colorScheme.surfaceContainerLow, width: 2),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '+1',
-                              style: textTheme.labelMedium?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
+                      children: List.generate(
+                        order.items.length > 3 ? 3 : order.items.length,
+                        (index) {
+                          if (index == 2 && order.items.length > 3) {
+                            return Positioned(
+                              left:
+                                  MediaQuery.of(context).size.width * 0.25 +
+                                  (index * 32) -
+                                  42,
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: colorScheme.surfaceContainerLow,
+                                    width: 2,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '+${order.items.length - 2}',
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
+                            );
+                          }
+                          return Positioned(
+                            left:
+                                MediaQuery.of(context).size.width * 0.25 +
+                                (index * 32) -
+                                42,
+                            child: _buildThumbnail(
+                              order.items[index].imageUrl,
+                              theme,
                             ),
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ).toList(),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -235,12 +279,12 @@ class OrderConfirmationScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(50),
                 gradient: LinearGradient(
-                  colors: [
+                  colors: <Color>[
                     colorScheme.secondary,
                     const Color(0xFFFE8763),
                   ],
                 ),
-                boxShadow: [
+                boxShadow: <BoxShadow>[
                   BoxShadow(
                     color: colorScheme.secondary.withValues(alpha: 0.2),
                     blurRadius: 20,
@@ -276,7 +320,7 @@ class OrderConfirmationScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  context.push('/order_details');
+                  context.push('/order_details/${order.orderId}');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.surfaceContainer,
@@ -300,7 +344,6 @@ class OrderConfirmationScreen extends StatelessWidget {
           ],
         ),
       ),
-
     );
   }
 
@@ -311,14 +354,14 @@ class OrderConfirmationScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.surfaceContainerLow, width: 2),
+        border: Border.all(
+          color: theme.colorScheme.surfaceContainerLow,
+          width: 2,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-        ),
+        child: Image.network(imageUrl, fit: BoxFit.cover),
       ),
     );
   }

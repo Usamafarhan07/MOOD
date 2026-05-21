@@ -24,6 +24,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Custom URL Scheme: mood://piece/:id -->
+            <intent-filter android:label="mood_deeplink">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="mood" android:host="piece" />
+            </intent-filter>
+            <!-- App Links: https://mood-store-3f4f7.web.app/piece/:id -->
+            <intent-filter android:autoVerify="true" android:label="mood_applink">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:host="mood-store-3f4f7.web.app" />
+                <data android:pathPrefix="/piece/" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

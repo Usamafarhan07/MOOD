@@ -1,0 +1,48 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwnUser(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Profile Images - secured path with user ID
+    match /profile_images/{userId} {
+      // Allow public read access to profile images
+      allow read: if true;
+      
+      // Allow write only for authenticated user's own profile image
+      // Restrictions: 5MB max size, JPEG or PNG only, no subdirectories
+      allow write: if isOwnUser(userId) 
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType in ['image/jpeg', 'image/png']
+                   && userId.matches('[a-zA-Z0-9_-]+');
+      
+      // Allow delete only by the user themselves
+      allow delete: if isOwnUser(userId);
+    }
+
+    // Product Images (read-only for clients)
+    match /product_images/{document=**} {
+      allow read: if true;
+      allow write: if false; // Only admin uploads via server
+    }
+
+    // Order receipts/invoices (read-only for authenticated users)
+    match /order_documents/{userId}/{document=**} {
+      allow read: if isOwnUser(userId);
+      allow write: if false; // Only server generates
+      allow delete: if false; // No deletes
+    }
+
+    // Default deny rule - deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

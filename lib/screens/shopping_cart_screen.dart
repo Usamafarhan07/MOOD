@@ -1,29 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
-
-class CartItem {
-  final String id;
-  final String imageUrl;
-  final String title;
-  final String subtitle;
-  final int unitPrice;
-  int quantity;
-
-  CartItem({
-    required this.id,
-    required this.imageUrl,
-    required this.title,
-    required this.subtitle,
-    required this.unitPrice,
-    this.quantity = 1,
-  });
-
-  String get formattedPrice => 'LKR ${(unitPrice * quantity).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
-  String get formattedUnitPrice => 'LKR ${unitPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
-}
-
-final List<CartItem> globalCartItems = [];
+import 'package:mood/services/firestore_service.dart';
 
 class ShoppingCartScreen extends StatefulWidget {
   const ShoppingCartScreen({super.key});
@@ -33,56 +13,31 @@ class ShoppingCartScreen extends StatefulWidget {
 }
 
 class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
-  late List<CartItem> _cartItems;
-
-  @override
-  void initState() {
-    super.initState();
-    _cartItems = globalCartItems;
-  }
-
-  int get _subtotal => _cartItems.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
-  int get _total => _subtotal; // Free shipping
+  final FirestoreService _firestoreService = FirestoreService();
 
   String _formatCurrency(int amount) {
     return 'LKR ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
   }
 
-  void _incrementQuantity(int index) {
-    setState(() {
-      _cartItems[index].quantity++;
-    });
+  Future<void> _incrementItemQuantity(String cartItemId, int currentQuantity) async {
+    await _firestoreService.updateCartItemQuantity(cartItemId, currentQuantity + 1);
   }
 
-  void _decrementQuantity(int index) {
-    setState(() {
-      if (_cartItems[index].quantity > 1) {
-        _cartItems[index].quantity--;
-      }
-    });
+  Future<void> _decrementItemQuantity(String cartItemId, int currentQuantity) async {
+    if (currentQuantity > 1) {
+      await _firestoreService.updateCartItemQuantity(cartItemId, currentQuantity - 1);
+    }
   }
 
-  void _removeItem(int index) {
-    final removedItem = _cartItems[index];
-    setState(() {
-      _cartItems.removeAt(index);
-    });
+  Future<void> _removeItem(String cartItemId, String title) async {
+    await _firestoreService.removeCartItem(cartItemId);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${removedItem.title} removed from bag'),
+        content: Text('$title removed from bag'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        action: SnackBarAction(
-          label: 'UNDO',
-          textColor: const Color(0xFFFE8763),
-          onPressed: () {
-            if (!mounted) return;
-            setState(() {
-              _cartItems.insert(index, removedItem);
-            });
-          },
-        ),
       ),
     );
   }
@@ -92,6 +47,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -136,210 +92,238 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           ),
         ),
       ),
-      body: _cartItems.isEmpty
-          ? _buildEmptyCart(theme)
-          : SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Page Title
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Bag',
-                          style: textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                            letterSpacing: -1.0,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${_cartItems.length} item${_cartItems.length != 1 ? 's' : ''} selected for checkout',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF504441),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Cart Items
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      children: List.generate(_cartItems.length, (index) {
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: index < _cartItems.length - 1 ? 16 : 0),
-                          child: _buildCartItem(
-                            item: _cartItems[index],
-                            index: index,
-                            theme: theme,
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-
-                  // Order Summary
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 0),
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Subtotal',
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: const Color(0xFF504441),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                _formatCurrency(_subtotal),
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Shipping',
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: const Color(0xFF504441),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                'LKR 0 (Complimentary)',
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.secondary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16.0),
-                            child: Divider(),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total',
-                                style: textTheme.headlineSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                _formatCurrency(_total),
-                                style: textTheme.headlineSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Checkout Action
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(50),
-                            gradient: LinearGradient(
-                              colors: [
-                                colorScheme.secondary,
-                                const Color(0xFFFE8763),
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colorScheme.secondary.withValues(alpha: 0.2),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              context.push('/checkout');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'CHECKOUT',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 2.0,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'FREE SHIPPING ON ALL ORDERS OVER LKR 25,000',
-                          textAlign: TextAlign.center,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFF827470),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      body: currentUser == null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Please sign in to view your cart.',
+                  style: textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
+            )
+          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _firestoreService.getCartStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error loading cart: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-      // Bottom Navigation Bar
+                final cartItems = snapshot.data?.docs
+                        .map((doc) => CartItem.fromSnapshot(doc))
+                        .toList() ??
+                    [];
+
+                final subtotal = cartItems.fold(0, (acc, item) => acc + (item.price * item.quantity));
+                final total = subtotal;
+
+                return cartItems.isEmpty
+                    ? _buildEmptyCart(theme)
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.only(bottom: 120),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Page Title
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Your Bag',
+                                    style: textTheme.displaySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary,
+                                      letterSpacing: -1.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${cartItems.length} item${cartItems.length != 1 ? 's' : ''} selected for checkout',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.primary.withValues(alpha: 0.6),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Cart Items
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Column(
+                                children: List.generate(cartItems.length, (index) {
+                                  return Padding(
+                                    padding: EdgeInsets.only(bottom: index < cartItems.length - 1 ? 16 : 0),
+                                    child: _buildCartItem(
+                                      item: cartItems[index],
+                                      theme: theme,
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+
+                            // Order Summary
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 40, 24, 0),
+                              child: Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Subtotal',
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.primary.withValues(alpha: 0.6),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          _formatCurrency(subtotal),
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Shipping',
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.primary.withValues(alpha: 0.6),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          'LKR 0 (Complimentary)',
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.secondary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                                      child: Divider(),
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Total',
+                                          style: textTheme.headlineSmall?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          _formatCurrency(total),
+                                          style: textTheme.headlineSmall?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Checkout Action
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(50),
+                                      gradient: LinearGradient(
+                                        colors: <Color>[
+                                          colorScheme.secondary,
+                                          const Color(0xFFFE8763),
+                                        ],
+                                      ),
+                                      boxShadow: <BoxShadow>[
+                                        BoxShadow(
+                                          color: colorScheme.secondary.withValues(alpha: 0.2),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        context.push('/checkout');
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: const EdgeInsets.symmetric(vertical: 24),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(50),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'CHECKOUT',
+                                            style: textTheme.labelSmall?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 2.0,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'FREE SHIPPING ON ALL ORDERS OVER LKR 25,000',
+                                    textAlign: TextAlign.center,
+                                    style: textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.primary.withValues(alpha: 0.5),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+              },
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
+          boxShadow: <BoxShadow>[
             BoxShadow(
               color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
@@ -399,7 +383,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           Text(
             'Explore our collection to find something you love',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF827470),
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 32),
@@ -409,7 +393,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: theme.colorScheme.surface,
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(50),
@@ -424,7 +408,6 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
 
   Widget _buildCartItem({
     required CartItem item,
-    required int index,
     required ThemeData theme,
   }) {
     return Container(
@@ -478,9 +461,9 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item.subtitle,
+                            item.subtitle ?? '',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF504441),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.6),
                               fontSize: 14,
                             ),
                           ),
@@ -499,7 +482,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       icon: Icon(Icons.delete_outline, color: theme.colorScheme.outline, size: 20),
-                      onPressed: () => _removeItem(index),
+                      onPressed: () => _removeItem(item.id, item.title),
                     ),
                   ],
                 ),
@@ -516,7 +499,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       GestureDetector(
-                        onTap: () => _decrementQuantity(index),
+                        onTap: () => _decrementItemQuantity(item.id, item.quantity),
                         child: Container(
                           width: 28,
                           height: 28,
@@ -549,7 +532,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                       ),
                       const SizedBox(width: 20),
                       GestureDetector(
-                        onTap: () => _incrementQuantity(index),
+                        onTap: () => _incrementItemQuantity(item.id, item.quantity),
                         child: Container(
                           width: 28,
                           height: 28,

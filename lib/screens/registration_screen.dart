@@ -1,9 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mood/services/firestore_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
+  
   const RegistrationScreen({super.key});
+  
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -12,8 +16,12 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscurePassword = true;
   bool _agreeTerms = false;
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _hasPasswordText = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -31,8 +39,100 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showSnackBar(String message) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleRegister() async {
+    final fullName = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (fullName.isEmpty) {
+      return _showSnackBar('Full name cannot be empty.');
+    }
+
+    if (email.isEmpty) {
+      return _showSnackBar('Email cannot be empty.');
+    }
+
+    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,}");
+    if (!emailRegex.hasMatch(email)) {
+      return _showSnackBar('Please enter a valid email address.');
+    }
+
+    if (password.isEmpty) {
+      return _showSnackBar('Password cannot be empty.');
+    }
+
+    if (password.length < 6) {
+      return _showSnackBar('Password must be at least 6 characters.');
+    }
+
+    if (confirmPassword != password) {
+      return _showSnackBar('Passwords do not match.');
+    }
+
+    if (!_agreeTerms) {
+      return _showSnackBar('Please agree to the terms and privacy policy.');
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      await credential.user?.updateDisplayName(fullName);
+
+      if (credential.user != null) {
+        await FirestoreService().createUserProfile(
+          uid: credential.user!.uid,
+          fullName: fullName,
+          email: email,
+        );
+      }
+
+      if (!mounted) return;
+      context.go('/home');
+    } on FirebaseAuthException catch (error) {
+      final message = switch (error.code) {
+        'email-already-in-use' => 'This email is already registered.',
+        'invalid-email' => 'That email address is invalid.',
+        'operation-not-allowed' => 'Email/password registration is not enabled.',
+        'weak-password' => 'Password is too weak. Use at least 6 characters.',
+        'too-many-requests' => 'Too many requests. Please try again later.',
+        _ => 'Registration failed. Please try again.',
+      };
+      await _showSnackBar(message);
+    } catch (_) {
+      await _showSnackBar('Registration failed. Please try again later.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -96,6 +196,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                     // Full Name Field
                     _buildInputField(
+                      controller: _fullNameController,
                       theme: theme,
                       label: 'FULL NAME',
                       hint: 'e.g. Julianne Moore',
@@ -104,6 +205,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                     // Email Field
                     _buildInputField(
+                      controller: _emailController,
                       theme: theme,
                       label: 'EMAIL ADDRESS',
                       hint: 'hello@atelier-mood.com',
@@ -113,6 +215,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                     // Password Field
                     _buildPasswordField(theme),
+                    const SizedBox(height: 24),
+
+                    // Confirm Password Field
+                    _buildInputField(
+                      controller: _confirmPasswordController,
+                      theme: theme,
+                      label: 'CONFIRM PASSWORD',
+                      hint: '••••••••••••',
+                      keyboardType: TextInputType.visiblePassword,
+                      obscureText: true,
+                    ),
                     const SizedBox(height: 24),
 
                     // Terms Checkbox
@@ -191,9 +304,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          context.go('/home');
-                        },
+                        onPressed: _isLoading ? null : _handleRegister,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: Colors.white,
@@ -203,14 +314,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
-                          'REGISTER',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2.4,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'REGISTER',
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2.4,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 48),
@@ -258,7 +378,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
+                        colors: <Color>[
                           Colors.transparent,
                           const Color(0xFFD4C3BE).withValues(alpha: 0.3),
                           Colors.transparent,
@@ -285,10 +405,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildInputField({
+    required TextEditingController controller,
     required ThemeData theme,
     required String label,
     required String hint,
     TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +428,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
         TextFormField(
+          controller: controller,
           keyboardType: keyboardType,
+          obscureText: obscureText,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.primary,
           ),

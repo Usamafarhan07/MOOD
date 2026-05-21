@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
-import 'package:mood/screens/wishlist_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mood/services/firestore_service.dart';
 
 class ProductListingScreen extends StatefulWidget {
   const ProductListingScreen({super.key});
@@ -13,33 +14,7 @@ class ProductListingScreen extends StatefulWidget {
 class _ProductListingScreenState extends State<ProductListingScreen> {
   String _selectedFilter = 'All Items';
   String _searchQuery = '';
-
-  final List<Map<String, String>> _allProducts = [
-    {
-      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDymoKsAIvfdQ7KBLyLjqEaQepNjxtekA0M1wkEML8FcEeKpVqGkpxpuDGpw1dcwQ_n-1PQxdPPjGSwqnEMOUJDIXyK9WBgy9453nH4XXtw54vEM821IgkacaJ7Zmj0NIX-acZPl561lZQanQWLmm26kI43927VjM1fAIMuA7DA5GtvdlGoPfHnFTXYE67upgPLlybmXTCip4ktZhWpYrhk1tsrLJp86XWda4pkdbp5wjiEuPItGUmbD2SaVnJehFDYI-eJT6AyXd4',
-      'label': 'Essentials',
-      'title': 'Sculpted Wool Coat',
-      'price': 'LKR 9000',
-    },
-    {
-      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuALvSkFfwTFYIKZ5Z5Nt4NNz-9nKGDEZ_gNjMlE4284bwR19QiJ-bLpwwB-vYMvXGmJdkqjO1fYlAwGbEwFU2rr2JQgHXEpF3SWkVIhsp41mSr6vzfPg3H5P7xtbgtzjfqZdr7VGFBBKJSn2-hTD0ef2YBvR3NNq8pGAe62EYNzxEv-m7JxE6qYMjGPH0H4NIqa0Fz2DJkKSOIkRkAVTbjm9ggaHN-6FpOSabg0KROZCKTxpFEXF0w61ufEhryJyIN3fGYYGhdUINA',
-      'label': 'New Arrival',
-      'title': 'Silk Drape Top',
-      'price': 'LKR 6990',
-    },
-    {
-      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuANi3-qQOrGpGZpeLcS6CQ9c7GMLX8eIZ3nTheqoi831NEfpT5i5yAMEShgZNYqVhUm7yZbVtbLAY8LP9PAW4FtOSOGdLIYVtfi8Alt0YkPxhh8VXDWF7Mq9DFyrxPvWxJcOx44FnFd7uiyd0gvH4N-tqzNzqhqz9WBRK0vESkAcMVsGLRGEE5rtuECZdu45zUdoRShhcGcdQ5sZEg8Fwbw-FoniULYqpQN_v8_vsNAZO3iuS804ZJ12avik22-U7RJNTakZDI6Jrw',
-      'label': 'Premium Collection',
-      'title': 'Pleated Wide-Leg Trousers',
-      'price': 'LKR 7590',
-    },
-    {
-      'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDrXPQMd0cWdf_VeA4FlGE9ITGmurdStBOWg1lx5PgxWQQX8kYjrUAY7fH-D2sQhyIM-mvA1LGS7XYe7b-TPu8-ZsSrd63TxVabHWilJ2nLHke7e65x7I3NygeVLopjRK-tcBcRSGlBai7IM3a4xi7NMw1zqyOwc0fGDT9_B5hui4kI9saP8h9x0WevK0u4u_HyGVKhZuxvGq-F5ez_sWiZqLcPtsgJ6oko5UFxik27BuEKP4b3blRTo9Zeg8bC2lajE-MxFnx1_YA',
-      'label': 'Knitwear',
-      'title': 'Toscana Leather Boot',
-      'price': 'LKR 15,000',
-    },
-  ];
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +82,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                   Text(
                     'Curated essentials for the modern minimalist. Sustainably sourced, meticulously crafted.',
                     style: textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF827470),
+                      color: colorScheme.primary.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                       height: 1.6,
                     ),
@@ -116,66 +91,50 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               ),
             ),
 
-            // Search Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF6F3EE),
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border.all(
-                          color: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(50),
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search_rounded,
+                      color: colorScheme.primary.withValues(alpha: 0.5),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search products...',
+                          hintStyle: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.primary.withValues(alpha: 0.35),
+                            letterSpacing: 0.3,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.primary,
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.search, color: colorScheme.primary.withValues(alpha: 0.45), size: 22),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                hintText: 'Search products...',
-                                hintStyle: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.primary.withValues(alpha: 0.35),
-                                  letterSpacing: 0.3,
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF6F3EE),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Icon(Icons.tune_outlined, color: colorScheme.primary.withValues(alpha: 0.6), size: 22),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -204,10 +163,27 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
             // Product Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final itemWidth = (constraints.maxWidth - 16) / 2;
-                  final filteredProducts = _allProducts.where((product) {
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestoreService.getProducts(label: _selectedFilter),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final products = snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return {
+                      'id': doc.id,
+                      ...data,
+                    };
+                  }).toList();
+
+                  final itemWidth = (MediaQuery.of(context).size.width - 16 - 48) / 2;
+                  final filteredProducts = products.where((product) {
                     final matchesFilter = _selectedFilter == 'All Items' || product['label'] == _selectedFilter;
                     final matchesSearch = product['title']!.toLowerCase().contains(_searchQuery.toLowerCase());
                     return matchesFilter && matchesSearch;
@@ -221,7 +197,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         child: Text(
                           'No products found.',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF827470),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -239,9 +215,11 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                           label: product['label']!,
                           title: product['title']!,
                           price: product['price']!,
-                          isFavorite: false, // Could integrate with globalWishlistItems here if desired
+                          productId: product['id']!.toString(),
+                          isFavorite: false,
                           theme: theme,
                           context: context,
+                          productData: product,
                         ),
                       );
                     }).toList(),
@@ -270,7 +248,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
-                            colors: [
+                            colors: <Color>[
                               colorScheme.primary.withValues(alpha: 0.6),
                               Colors.transparent,
                             ],
@@ -305,12 +283,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(50),
                                 gradient: LinearGradient(
-                                  colors: [
+                                  colors: <Color>[
                                     colorScheme.secondary,
                                     const Color(0xFFFE8763),
                                   ],
                                 ),
-                                boxShadow: [
+                                boxShadow: <BoxShadow>[
                                   BoxShadow(
                                     color: colorScheme.secondary.withValues(alpha: 0.2),
                                     blurRadius: 20,
@@ -356,7 +334,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         decoration: BoxDecoration(
           color: colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          boxShadow: [
+          boxShadow: <BoxShadow>[
             BoxShadow(
               color: colorScheme.primary.withValues(alpha: 0.05),
               blurRadius: 30,
@@ -403,7 +381,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(50),
         boxShadow: isSelected
-            ? [
+            ? <BoxShadow>[
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
@@ -415,7 +393,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
       child: Text(
         label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
-          color: isSelected ? Colors.white : theme.colorScheme.primary,
+          color: isSelected ? theme.colorScheme.surface : theme.colorScheme.primary,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
           fontSize: 12,
@@ -429,18 +407,15 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
     required String label,
     required String title,
     required String price,
+    required String productId,
     required bool isFavorite,
     required ThemeData theme,
     required BuildContext context,
+    required Map<String, dynamic> productData,
   }) {
     return InkWell(
       onTap: () {
-        context.push('/product_details', extra: {
-          'title': title,
-          'price': price,
-          'label': label,
-          'imageUrl': imageUrl,
-        });
+        context.push('/product_details', extra: productData);
       },
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,6 +441,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                   title: title,
                   price: price,
                   imageUrl: imageUrl,
+                  productId: productId,
                 ),
               ),
             ],
@@ -475,7 +451,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         Text(
           label.toUpperCase(),
           style: theme.textTheme.labelSmall?.copyWith(
-            color: const Color(0xFF827470),
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
             fontSize: 9,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
@@ -538,6 +514,7 @@ class _FavoriteButton extends StatefulWidget {
   final String title;
   final String price;
   final String imageUrl;
+  final String productId;
 
   const _FavoriteButton({
     required this.initialIsFavorite,
@@ -545,6 +522,7 @@ class _FavoriteButton extends StatefulWidget {
     required this.title,
     required this.price,
     required this.imageUrl,
+    required this.productId,
   });
 
   @override
@@ -552,6 +530,7 @@ class _FavoriteButton extends StatefulWidget {
 }
 
 class _FavoriteButtonState extends State<_FavoriteButton> {
+  final FirestoreService _firestoreService = FirestoreService();
   late bool _isFavorite;
 
   @override
@@ -560,11 +539,26 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
     _isFavorite = widget.initialIsFavorite;
   }
 
+  Future<void> _updateWishlist(bool isFavorite) async {
+    final priceValue = int.tryParse(widget.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    if (isFavorite) {
+      await _firestoreService.addWishlistItem(
+        productId: widget.productId,
+        title: widget.title,
+        imageUrl: widget.imageUrl,
+        price: priceValue,
+        subtitle: 'Category • Color',
+      );
+    } else {
+      await _firestoreService.removeWishlistItem(widget.productId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
+        color: widget.theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.8),
         shape: BoxShape.circle,
       ),
       child: ClipOval(
@@ -576,47 +570,21 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
               color: widget.theme.colorScheme.primary,
               size: 18,
             ),
-            onPressed: () {
+            onPressed: () async {
               setState(() {
                 _isFavorite = !_isFavorite;
               });
-
-              final existingIndex = globalWishlistItems.indexWhere((item) => item.title == widget.title);
-
-              if (_isFavorite) {
-                if (existingIndex < 0) {
-                  globalWishlistItems.add(
-                    WishlistItemData(
-                      imageUrl: widget.imageUrl,
-                      title: widget.title,
-                      price: widget.price,
-                      subtitle: 'Category • Color',
-                    ),
-                  );
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Saved to Wishlist'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: widget.theme.colorScheme.primary,
-                    duration: const Duration(seconds: 2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                );
-              } else {
-                if (existingIndex >= 0) {
-                  globalWishlistItems.removeAt(existingIndex);
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Removed from Wishlist'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: widget.theme.colorScheme.error,
-                    duration: const Duration(seconds: 2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                );
-              }
+              await _updateWishlist(_isFavorite);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_isFavorite ? 'Saved to Wishlist' : 'Removed from Wishlist'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: _isFavorite ? widget.theme.colorScheme.primary : widget.theme.colorScheme.error,
+                  duration: const Duration(seconds: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              );
             },
             constraints: const BoxConstraints(),
             padding: const EdgeInsets.all(8),
