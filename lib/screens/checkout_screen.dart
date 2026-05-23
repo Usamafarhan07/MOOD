@@ -107,7 +107,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           (sum, item) => sum + (item.price * item.quantity),
         );
         final delivery = 500;
-        final tax = (subtotal * 0.02).toInt(); // 2% dummy tax
+        final tax = (subtotal * 0.02).toInt();
         final total = subtotal + delivery + tax;
         final savedPayment = _profile?.paymentMethod;
         final savedCardLast4 = savedPayment?['last4']?.toString();

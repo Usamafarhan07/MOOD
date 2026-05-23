@@ -32,24 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _productsFuture = _loadProducts(_selectedCategory);
     _pageController = PageController(initialPage: 0);
     _loadHomeBanners();
-    _seedPerfumeBeautyProducts();
     _startAutoSlide();
-  }
-
-  Future<void> _seedPerfumeBeautyProducts() async {
-    try {
-      await _firestoreService.seedPerfumeBeautyProducts();
-      if (!mounted || _selectedCategory != 'All Items') return;
-      setState(() {
-        _productsFuture = _loadProducts(_selectedCategory);
-      });
-    } catch (_) {
-      // Home still shows local perfume products if Firestore write is blocked.
-    }
   }
 
   Future<void> _loadHomeBanners() async {
     try {
+      await _firestoreService.seedHomeBanners();
+      await _firestoreService.seedAppConfigs();
       final snapshot = await _firestoreService
           .getHomeBanners()
           .first

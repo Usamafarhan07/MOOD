@@ -44,6 +44,17 @@ service cloud.firestore {
       allow delete: if hasAdminClaim();
     }
 
+    // App-managed image/config documents - public read, admin write only
+    match /config/{configId} {
+      allow read: if true;
+      allow create, update: if hasAdminClaim()
+                   && request.resource.data.keys().hasAll(['imageUrl'])
+                   && request.resource.data.imageUrl is string
+                   && (!request.resource.data.keys().hasAny(['title']) || request.resource.data.title is string)
+                   && (!request.resource.data.keys().hasAny(['subtitle']) || request.resource.data.subtitle is string);
+      allow delete: if hasAdminClaim();
+    }
+
     // Users collection - user owns their data
     match /users/{uid} {
       allow read: if isOwnUser(uid);
@@ -96,6 +107,16 @@ service cloud.firestore {
         allow update: if isOwnUser(uid) 
                       && request.resource.data.productId == resource.data.productId
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['addedAt']);
+        allow delete: if isOwnUser(uid);
+      }
+
+      // Notifications subcollection - user owns their notification state
+      match /notifications/{notificationId} {
+        allow read: if isOwnUser(uid);
+        allow create: if false;
+        allow update: if isOwnUser(uid)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'updatedAt'])
+                      && request.resource.data.isRead is bool;
         allow delete: if isOwnUser(uid);
       }
     }

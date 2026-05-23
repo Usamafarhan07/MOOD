@@ -1,29 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mood/services/firestore_service.dart';
-
-class NotificationItem {
-  final String id;
-  final String title;
-  final String? subtitle;
-  final String? status;
-  final String time;
-  final String? imageUrl;
-  final IconData? icon;
-  bool isRead;
-
-  NotificationItem({
-    required this.id,
-    required this.title,
-    this.subtitle,
-    this.status,
-    required this.time,
-    this.imageUrl,
-    this.icon,
-    this.isRead = false,
-  });
-}
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -40,68 +19,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   // Selected Notification IDs
   final Set<String> _selectedIds = {};
-
-  // List of active notifications in local state
-  late List<NotificationItem> _notifications;
+  List<UserNotification> _latestNotifications = [];
 
   final FirestoreService _firestoreService = FirestoreService();
-
-  @override
-  void initState() {
-    super.initState();
-    _notifications = [
-      NotificationItem(
-        id: '1',
-        imageUrl: '',
-        title: 'Order #ATL-8829-0142 is being prepared with artisanal care',
-        status: 'In Production',
-        time: '2h ago',
-      ),
-      NotificationItem(
-        id: '2',
-        icon: Icons.auto_awesome,
-        title: 'New Arrival: The Winter Silk Collection is now available',
-        subtitle:
-            'Discover fluidity in structure with our latest artisanal drop.',
-        time: '5h ago',
-      ),
-      NotificationItem(
-        id: '3',
-        icon: Icons.favorite,
-        title: 'Style Alert: Pieces you loved are back in stock',
-        subtitle:
-            'The L\'Artiste Trousers in Midnight Sand have returned to our atelier.',
-        time: 'Yesterday',
-      ),
-      NotificationItem(
-        id: '4',
-        icon: Icons.mail_outlined,
-        title: 'Your monthly style digest is here',
-        time: '3 days ago',
-        isRead: true, // Set to true to faded by default
-      ),
-    ];
-    _loadNotificationImages();
-  }
-
-  Future<void> _loadNotificationImages() async {
-    final url = await _firestoreService.getAppConfigUrl('notifications_order');
-    if (mounted && url != null && url.isNotEmpty) {
-      setState(() {
-        final idx = _notifications.indexWhere((n) => n.id == '1');
-        if (idx != -1) {
-          _notifications[idx] = NotificationItem(
-            id: _notifications[idx].id,
-            imageUrl: url,
-            title: _notifications[idx].title,
-            status: _notifications[idx].status,
-            time: _notifications[idx].time,
-            isRead: _notifications[idx].isRead,
-          );
-        }
-      });
-    }
-  }
 
   // Toggle selection of a notification
   void _toggleSelection(String id) {
@@ -114,29 +34,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
-  // Delete selected notifications with Undo support
-  void _deleteSelected() {
+  Future<void> _deleteSelected() async {
     if (_selectedIds.isEmpty) return;
 
-    final selectedItems = _notifications
-        .where((n) => _selectedIds.contains(n.id))
-        .toList();
-    final List<int> originalIndices = [];
-    for (var item in selectedItems) {
-      originalIndices.add(_notifications.indexOf(item));
-    }
-
+    final deleteCount = _selectedIds.length;
+    final ids = _selectedIds.toList();
     setState(() {
-      _notifications.removeWhere((n) => _selectedIds.contains(n.id));
       _selectedIds.clear();
     });
 
+    try {
+      await _firestoreService.deleteNotifications(ids);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to delete notifications',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${selectedItems.length} notifications deleted',
+          '$deleteCount notifications deleted',
           style: GoogleFonts.manrope(
             color: isDark ? const Color(0xFF16100E) : const Color(0xFFFCF9F4),
             fontWeight: FontWeight.w600,
@@ -146,15 +77,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         action: SnackBarAction(
-          label: 'UNDO',
+          label: 'OK',
           textColor: isDark ? const Color(0xFFA04022) : const Color(0xFFFE8763),
-          onPressed: () {
-            setState(() {
-              for (int i = 0; i < selectedItems.length; i++) {
-                _notifications.insert(originalIndices[i], selectedItems[i]);
-              }
-            });
-          },
+          onPressed: () {},
         ),
       ),
     );
@@ -314,11 +239,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   // Clear all notifications
-  void _clearAllNotifications() {
+  Future<void> _clearAllNotifications() async {
+    final ids = _latestNotifications.map((notification) => notification.id);
     setState(() {
-      _notifications.clear();
       _selectedIds.clear();
     });
+    await _firestoreService.deleteNotifications(ids);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -330,6 +257,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
+  }
+
+  IconData _iconForName(String? iconName) {
+    switch (iconName) {
+      case 'favorite':
+        return Icons.favorite;
+      case 'mail':
+        return Icons.mail_outlined;
+      case 'order':
+        return Icons.local_shipping_outlined;
+      case 'collection':
+        return Icons.auto_awesome;
+      default:
+        return Icons.notifications_outlined;
+    }
   }
 
   @override
@@ -393,13 +335,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               else
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert, color: colorScheme.primary),
-                  onSelected: (value) {
+                  onSelected: (value) async {
                     if (value == 'read') {
-                      setState(() {
-                        for (var n in _notifications) {
-                          n.isRead = true;
-                        }
-                      });
+                      await _firestoreService.markAllNotificationsRead();
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -418,7 +357,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     } else if (value == 'settings') {
                       _showPreferencesSheet();
                     } else if (value == 'clear') {
-                      _clearAllNotifications();
+                      await _clearAllNotifications();
                     }
                   },
                   offset: const Offset(0, 48),
@@ -502,8 +441,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       ),
-      body: _notifications.isEmpty
-          ? Center(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _firestoreService.getNotificationsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Failed to load notifications.',
+                style: GoogleFonts.manrope(color: colorScheme.error),
+              ),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
+            );
+          }
+
+          final notifications = snapshot.data?.docs
+                  .map((doc) => UserNotification.fromSnapshot(doc))
+                  .where((item) => item.title.trim().isNotEmpty)
+                  .toList() ??
+              <UserNotification>[];
+          _latestNotifications = notifications;
+
+          if (notifications.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -523,60 +487,60 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ],
               ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
+            );
+          }
 
-                  // Recent Activity Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Text(
-                      'RECENT ACTIVITY',
-                      style: GoogleFonts.notoSerif(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 2.0,
-                        color: colorScheme.primary.withValues(alpha: 0.6),
-                      ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'RECENT ACTIVITY',
+                    style: GoogleFonts.notoSerif(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 2.0,
+                      color: colorScheme.primary.withValues(alpha: 0.6),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: notifications.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final item = notifications[index];
+                    final isSelected = _selectedIds.contains(item.id);
 
-                  // Load notifications dynamically
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _notifications.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final item = _notifications[index];
-                      final isSelected = _selectedIds.contains(item.id);
+                    if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+                      return _buildOrderNotification(
+                        context: context,
+                        item: item,
+                        isSelected: isSelected,
+                        theme: theme,
+                      );
+                    }
 
-                      if (item.imageUrl != null) {
-                        return _buildOrderNotification(
-                          context: context,
-                          item: item,
-                          isSelected: isSelected,
-                          theme: theme,
-                        );
-                      } else {
-                        return _buildIconNotification(
-                          context: context,
-                          item: item,
-                          isSelected: isSelected,
-                          theme: theme,
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
+                    return _buildIconNotification(
+                      context: context,
+                      item: item,
+                      isSelected: isSelected,
+                      theme: theme,
+                    );
+                  },
+                ),
+              ],
             ),
+          );
+        },
+      ),
 
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
@@ -631,7 +595,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildOrderNotification({
     required BuildContext context,
-    required NotificationItem item,
+    required UserNotification item,
     required bool isSelected,
     required ThemeData theme,
   }) {
@@ -720,7 +684,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     Row(
                       children: [
                         Text(
-                          item.status!.toUpperCase(),
+                          (item.status ?? 'Update').toUpperCase(),
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
@@ -761,7 +725,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildIconNotification({
     required BuildContext context,
-    required NotificationItem item,
+    required UserNotification item,
     required bool isSelected,
     required ThemeData theme,
   }) {
@@ -772,10 +736,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     Color iconBgColor = colorScheme.primary;
     Color iconColor = colorScheme.surface;
 
-    if (item.icon == Icons.favorite) {
+    final icon = _iconForName(item.icon);
+
+    if (icon == Icons.favorite) {
       iconBgColor = colorScheme.secondary.withValues(alpha: 0.2);
       iconColor = colorScheme.secondary;
-    } else if (item.icon == Icons.mail_outlined) {
+    } else if (icon == Icons.mail_outlined) {
       iconBgColor = colorScheme.surfaceContainer;
       iconColor = colorScheme.primary;
     }
@@ -812,7 +778,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       color: iconBgColor,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(item.icon, color: iconColor, size: 22),
+                    child: Icon(icon, color: iconColor, size: 22),
                   ),
                   if (isSelected)
                     Positioned.fill(

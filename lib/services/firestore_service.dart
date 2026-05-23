@@ -100,6 +100,71 @@ class WishlistItem {
   }
 }
 
+class UserNotification {
+  final String id;
+  final String title;
+  final String? subtitle;
+  final String? status;
+  final String? imageUrl;
+  final String? icon;
+  final String time;
+  final bool isRead;
+  final DateTime createdAt;
+
+  UserNotification({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    this.status,
+    this.imageUrl,
+    this.icon,
+    required this.time,
+    required this.isRead,
+    required this.createdAt,
+  });
+
+  factory UserNotification.fromSnapshot(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final data = snapshot.data() ?? {};
+    final createdAt = _dateFromValue(data['createdAt']);
+
+    return UserNotification(
+      id: snapshot.id,
+      title: data['title']?.toString() ?? '',
+      subtitle: _nullableString(data['subtitle']),
+      status: _nullableString(data['status']),
+      imageUrl: _nullableString(data['imageUrl']),
+      icon: _nullableString(data['icon']),
+      time: _nullableString(data['time']) ?? _formatRelativeTime(createdAt),
+      isRead: data['isRead'] == true,
+      createdAt: createdAt,
+    );
+  }
+
+  static DateTime _dateFromValue(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
+  }
+
+  static String? _nullableString(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
+  static String _formatRelativeTime(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+    if (difference.inDays < 1) return '${difference.inHours}h ago';
+    if (difference.inDays == 1) return 'Yesterday';
+    return '${difference.inDays} days ago';
+  }
+}
+
 class OrderItem {
   final String productId;
   final String title;
@@ -269,6 +334,7 @@ class FirestoreService {
   static const String _homeBannersCollection = 'home_banners';
   static const String _cartSubcollection = 'cart';
   static const String _wishlistSubcollection = 'wishlist';
+  static const String _notificationsSubcollection = 'notifications';
   static const String _ordersCollection = 'orders';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -312,6 +378,12 @@ class FirestoreService {
           .collection(_usersCollection)
           .doc(_currentUser.uid)
           .collection(_wishlistSubcollection);
+
+  CollectionReference<Map<String, dynamic>> get _notificationsCollection =>
+      _firestore
+          .collection(_usersCollection)
+          .doc(_currentUser.uid)
+          .collection(_notificationsSubcollection);
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getProducts({
     String? label,
@@ -368,6 +440,50 @@ class FirestoreService {
           .snapshots();
     } catch (e) {
       throw Exception('Failed to fetch wishlist: $e');
+    }
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream() {
+    try {
+      return _notificationsCollection
+          .orderBy('createdAt', descending: true)
+          .limit(100)
+          .snapshots();
+    } catch (e) {
+      throw Exception('Failed to fetch notifications: $e');
+    }
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    try {
+      final docs = await _notificationsCollection.limit(100).get();
+      if (docs.docs.isEmpty) return;
+
+      final batch = _firestore.batch();
+      for (final doc in docs.docs) {
+        batch.update(doc.reference, {
+          'isRead': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to mark notifications as read: $e');
+    }
+  }
+
+  Future<void> deleteNotifications(Iterable<String> notificationIds) async {
+    final ids = notificationIds.where((id) => id.trim().isNotEmpty).toList();
+    if (ids.isEmpty) return;
+
+    try {
+      final batch = _firestore.batch();
+      for (final id in ids) {
+        batch.delete(_notificationsCollection.doc(id));
+      }
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to delete notifications: $e');
     }
   }
 
@@ -749,488 +865,23 @@ class FirestoreService {
     }
   }
 
-  Future<void> migrateProductDetails() async {
+  Future<String?> getAppConfigUrl(String key) async {
     try {
-      final querySnapshot = await products.get();
-      final batch = _firestore.batch();
-
-      for (final doc in querySnapshot.docs) {
-        final data = doc.data();
-        final updates = <String, dynamic>{};
-
-        // If composition is missing, set a premium default
-        if (!data.containsKey('composition')) {
-          updates['composition'] = [
-            '80% Organic Wool',
-            '20% Recycled Cashmere',
-          ];
-        }
-
-        // If careInstructions is missing, set a premium default
-        if (!data.containsKey('careInstructions')) {
-          updates['careInstructions'] = [
-            'Dry clean only. Do not wash. Do not bleach. Cool iron if needed.',
-          ];
-        }
-
-        // If shippingDetails is missing, set a premium default
-        if (!data.containsKey('shippingDetails')) {
-          updates['shippingDetails'] = [
-            'Standard Delivery: 3-5 business days. Free on all orders.',
-          ];
-        }
-
-        // If sustainability is missing, set a premium default
-        if (!data.containsKey('sustainability')) {
-          updates['sustainability'] = [
-            'Ethically crafted in our certified carbon-neutral facility.',
-            'Shipped in 100% biodegradable and zero-plastic packaging.',
-          ];
-        }
-
-        if (updates.isNotEmpty) {
-          batch.update(doc.reference, updates);
-        }
+      final doc = await _firestore.collection('config').doc(key).get();
+      if (doc.exists) {
+        return doc.data()?['imageUrl'] as String?;
       }
-
-      await batch.commit();
-      debugPrint('Firestore product migration complete successfully!');
-
-      // Auto seed/update premium category-wise products
-      await seedPremiumProducts();
-    } catch (e) {
-      debugPrint('Error during Firestore product migration: $e');
-    }
+    } catch (_) {}
+    return null;
   }
 
-  Future<void> seedPremiumProducts() async {
-    try {
-      final batch = _firestore.batch();
-      final premiumProducts = [
-        {
-          'id': 'piece_1',
-          'title': 'Double-Breasted Wool Trench',
-          'category': 'Women',
-          'label': 'Outerwear',
-          'price': 'LKR 32,000',
-          'subtitle': 'Outerwear • Beige',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuANAwip_SplPsYu1rJwkTzQhd_dzGfh7uwXF0FI3F-lHpKmm5fpStr79od52os4NJR4zKgA6YLcksH08K2xjqwFQ_t1UtmjWQ1dHnpN_mwWn62EzDGyfWzFZEtCXUH14YWQn1CZS7i3FWARs0HcMcn_lCmVj1ETrrheRRAmjb8BUn4ZMZdBRJWc645GfXKUxY_Pzln4Cwihl3FeCLSR7D_OIzUzKHgS4gZonctdAlCElek4Ccedqtuc8Yna01YsiQB3fB40mQN1EKs',
-          'composition': ['85% Virgin Wool', '15% Silk Lining'],
-          'careInstructions': ['Professional dry clean only', 'Do not iron'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': [
-            'Crafted from certified animal-friendly organic wool.',
-          ],
-        },
-        {
-          'id': 'piece_2',
-          'title': 'Oversized Cashmere Knitwear',
-          'category': 'Women',
-          'label': 'Knitwear',
-          'price': 'LKR 24,000',
-          'subtitle': 'Knitwear • Cream',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
-          'composition': ['100% Mongolian Cashmere'],
-          'careInstructions': ['Hand wash cold', 'Lay flat to dry'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Sourced from sustainable cashmere farms.'],
-        },
-        {
-          'id': 'piece_3',
-          'title': 'Structured Tailored Blazer',
-          'category': 'Men',
-          'label': 'Outerwear',
-          'price': 'LKR 28,500',
-          'subtitle': 'Outerwear • Charcoal',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
-          'composition': ['90% Organic Cotton', '10% Elastane'],
-          'careInstructions': ['Dry clean only'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Crafted with GOTS-certified organic cotton.'],
-        },
-        {
-          'id': 'piece_4',
-          'title': 'Merino Wool Crewneck',
-          'category': 'Men',
-          'label': 'Knitwear',
-          'price': 'LKR 19,000',
-          'subtitle': 'Knitwear • Olive Green',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuCtOnOOXGA2BDQydlnHCriYfQhXOuDXPi0asqNWUtsOsiqzq04udrkH3ks1A1LnMBCgNkcjN0LwOnDyMHeA4uVRbGMffd3N59C_ix6Gdp2nwjQHUYb03VoEX9AaR_Ci_ev0xmR2CsipxnX6I9PXOD0FNzXl6KyQkjeZCroPE6RDVI-1bZRLrhRupZx-u6feWiBpPJHrAHhDrUoaHYkXsYBufQae32TE-rg-hReKolFDH9xPRVcGh9IcYTGdC5ZUXyqk6k_8I3CLpeQ',
-          'composition': ['100% Merino Wool'],
-          'careInstructions': ['Hand wash cold', 'Do not tumble dry'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Ethically sourced non-mulesed wool.'],
-        },
-        {
-          'id': 'piece_5',
-          'title': 'Minimalist Chelsea Boots',
-          'category': 'Men',
-          'label': 'Footwear',
-          'price': 'LKR 35,000',
-          'subtitle': 'Footwear • Black Leather',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuAr920s20Va1_M_FurAXZbIyZOoWP1ykudNH5htiRYaRRcf3quveFwAprJEET9RkH8Oiwcj30MV9o3kOVdMIpXlLPWve5pjndW_0DO15tkA5gVFO9FYl29uoAwt9KHQD7qq8PT9gvIE0nOQo1DTcqjwdGn_d-rNbyhNXf6ILyvwctY_a-WnC6H9M3ilObVlvO4hG4vbIkFIWJ9M5FwOmJmZCaVaCzKDQcwSjES6QWSONjhYAki6rXwtQB8qBRqjsTfrhctAoRk64l0',
-          'composition': ['100% Full-Grain Calf Leather', 'Rubber Lug Sole'],
-          'careInstructions': [
-            'Clean with damp cloth',
-            'Apply leather conditioner',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Gold-certified Italian tannery leather.'],
-        },
-        {
-          'id': 'piece_6',
-          'title': 'Classic Leather Shoulder Bag',
-          'category': 'Women',
-          'label': 'Accessories',
-          'price': 'LKR 18,500',
-          'subtitle': 'Accessories • Tan Leather',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
-          'composition': ['100% Full-Grain Leather'],
-          'careInstructions': ['Avoid water contact', 'Use leather cleaner'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Vegetable-tanned chemical-free leather.'],
-        },
-        {
-          'id': 'piece_7',
-          'title': 'Wool Felt Wide-Brim Hat',
-          'category': 'Women',
-          'label': 'Accessories',
-          'price': 'LKR 9,500',
-          'subtitle': 'Accessories • Beige',
-          'imageUrl':
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
-          'composition': ['100% Premium Wool Felt'],
-          'careInstructions': ['Lint roll to clean', 'Store in hat box'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Biodegradable and naturally sourced wool.'],
-        },
-        {
-          'id': 'piece_8',
-          'title': 'Organic Cotton Kids Trench',
-          'category': 'Kids',
-          'label': 'Outerwear',
-          'price': 'LKR 15,000',
-          'subtitle': 'Outerwear • Beige',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1622290319146-7b63df48a635?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['100% Organic Cotton'],
-          'careInstructions': ['Machine wash warm', 'Tumble dry low'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['GOTS-certified toxic-free baby cotton.'],
-        },
-        {
-          'id': 'piece_9',
-          'title': 'Chunky Knit Kids Cardigan',
-          'category': 'Kids',
-          'label': 'Knitwear',
-          'price': 'LKR 12,500',
-          'subtitle': 'Knitwear • Mustard',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['80% Organic Cotton', '20% Wool'],
-          'careInstructions': ['Machine wash cold', 'Dry flat'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Naturally dyed organic fibers.'],
-        },
-        {
-          'id': 'piece_10',
-          'title': 'Minimalist Suede Loafers',
-          'category': 'Women',
-          'label': 'Footwear',
-          'price': 'LKR 22,000',
-          'subtitle': 'Footwear • Beige Suede',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['100% Genuine Suede', 'Leather Sole'],
-          'careInstructions': [
-            'Brush gently with suede brush',
-            'Apply suede protector',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': [
-            'Handmade by artisans using certified eco-leather.',
-          ],
-        },
-        {
-          'id': 'piece_11',
-          'title': 'Premium Kids Woolen Set',
-          'category': 'Kids',
-          'label': 'Knitwear',
-          'price': 'LKR 17,500',
-          'subtitle': 'Knitwear • Neutral Gray',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['90% Organic Cotton', '10% Cashmere'],
-          'careInstructions': ['Machine wash gentle cold', 'Lay flat to dry'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': [
-            'Naturally sourced and dyed fibers, zero plastic.',
-          ],
-        },
-        {
-          'id': 'piece_12',
-          'title': 'Classic Minimalist Overcoat',
-          'category': 'Men',
-          'label': 'Outerwear',
-          'price': 'LKR 31,000',
-          'subtitle': 'Outerwear • Charcoal Gray',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1544022613-e87ca75a784a?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['90% Cashmere Wool', '10% Mulberry Silk'],
-          'careInstructions': ['Professional dry clean only', 'Do not iron'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Crafted from certified organic wool.'],
-        },
-        {
-          'id': 'piece_13',
-          'title': 'Structured Linen Overshirt',
-          'category': 'Men',
-          'label': 'Outerwear',
-          'price': 'LKR 16,500',
-          'subtitle': 'Shirts • Sand Beige',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['100% Premium Belgian Linen'],
-          'careInstructions': ['Machine wash cold gentle', 'Hang to dry'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Naturally derived eco-friendly linen fibers.'],
-        },
-        {
-          'id': 'piece_14',
-          'title': 'Modern Leather Derby',
-          'category': 'Men',
-          'label': 'Footwear',
-          'price': 'LKR 26,000',
-          'subtitle': 'Footwear • Onyx Black',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['100% Full Grain Leather', 'Durable Rubber Sole'],
-          'careInstructions': [
-            'Clean with damp cloth',
-            'Use leather conditioner',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': [
-            'Handmade by artisans using certified eco-leather.',
-          ],
-        },
-        {
-          'id': 'piece_15',
-          'title': 'Premium Silk-Blend Bomber',
-          'category': 'Men',
-          'label': 'Outerwear',
-          'price': 'LKR 29,500',
-          'subtitle': 'Outerwear • Midnight Blue',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=600&h=800&q=80',
-          'composition': ['60% Mulberry Silk', '40% Organic Cotton'],
-          'careInstructions': ['Dry clean only', 'Cool iron if needed'],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Made with ethically sourced silk fibers.'],
-        },
-        {
-          'id': 'beauty-signature-eau-de-parfum',
-          'title': 'Signature Eau de Parfum',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 18,900',
-          'subtitle': 'Fragrance - Warm Woods',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A refined eau de parfum with warm woods, soft florals, and a polished evening trail.',
-          'sizes': ['50ML', '100ML'],
-          'composition': ['Bergamot', 'White florals', 'Amber woods'],
-          'careInstructions': [
-            'Store away from direct sunlight',
-            'Keep cap closed after use',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Packaged in recyclable glass.'],
-        },
-        {
-          'id': 'beauty-amber-glass-perfume',
-          'title': 'Amber Glass Perfume',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 16,500',
-          'subtitle': 'Fragrance - Amber Vanilla',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A luminous amber fragrance with vanilla, cedar, and an elegant skin-like finish.',
-          'sizes': ['50ML', '100ML'],
-          'composition': ['Amber', 'Vanilla', 'Cedarwood'],
-          'careInstructions': [
-            'Store in a cool dry place',
-            'Avoid spraying near eyes',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Made with responsibly sourced fragrance oils.'],
-        },
-        {
-          'id': 'beauty-luxury-skincare-set',
-          'title': 'Luxury Skincare Set',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 21,900',
-          'subtitle': 'Beauty - Hydrating Ritual',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A curated skincare ritual with hydrating essentials for a clean, luminous finish.',
-          'sizes': ['Set'],
-          'composition': ['Cleanser', 'Serum', 'Moisturizer'],
-          'careInstructions': [
-            'Use morning and evening',
-            'Patch test before first use',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Cruelty-free formula in recyclable packaging.'],
-        },
-        {
-          'id': 'beauty-satin-lip-colour',
-          'title': 'Satin Lip Colour',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 5,900',
-          'subtitle': 'Beauty - Satin Finish',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A satin lip colour with rich pigment, smooth comfort, and a luxury soft-focus sheen.',
-          'sizes': ['One Size'],
-          'composition': ['Satin pigment', 'Nourishing oils', 'Soft waxes'],
-          'careInstructions': [
-            'Close cap tightly after use',
-            'Store away from direct heat',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Cruelty-free formula.'],
-        },
-      ];
-
-      for (final p in premiumProducts) {
-        final docRef = products.doc(p['id'] as String);
-        batch.set(docRef, p);
-      }
-      await batch.commit();
-      debugPrint('Seeded Premium Products successfully!');
-    } catch (e) {
-      debugPrint('Error seeding premium products: $e');
-    }
-  }
-
-  Future<void> seedPerfumeBeautyProducts() async {
-    try {
-      final batch = _firestore.batch();
-      final perfumeProducts = [
-        {
-          'id': 'beauty-signature-eau-de-parfum',
-          'title': 'Signature Eau de Parfum',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 18,900',
-          'subtitle': 'Fragrance - Warm Woods',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A refined eau de parfum with warm woods, soft florals, and a polished evening trail.',
-          'sizes': ['50ML', '100ML'],
-          'composition': ['Bergamot', 'White florals', 'Amber woods'],
-          'careInstructions': [
-            'Store away from direct sunlight',
-            'Keep cap closed after use',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Packaged in recyclable glass.'],
-        },
-        {
-          'id': 'beauty-amber-glass-perfume',
-          'title': 'Amber Glass Perfume',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 16,500',
-          'subtitle': 'Fragrance - Amber Vanilla',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A luminous amber fragrance with vanilla, cedar, and an elegant skin-like finish.',
-          'sizes': ['50ML', '100ML'],
-          'composition': ['Amber', 'Vanilla', 'Cedarwood'],
-          'careInstructions': [
-            'Store in a cool dry place',
-            'Avoid spraying near eyes',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Made with responsibly sourced fragrance oils.'],
-        },
-        {
-          'id': 'beauty-luxury-skincare-set',
-          'title': 'Luxury Skincare Set',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 21,900',
-          'subtitle': 'Beauty - Hydrating Ritual',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A curated skincare ritual with hydrating essentials for a clean, luminous finish.',
-          'sizes': ['Set'],
-          'composition': ['Cleanser', 'Serum', 'Moisturizer'],
-          'careInstructions': [
-            'Use morning and evening',
-            'Patch test before first use',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Cruelty-free formula in recyclable packaging.'],
-        },
-        {
-          'id': 'beauty-satin-lip-colour',
-          'title': 'Satin Lip Colour',
-          'category': 'Perfume / Beauty',
-          'label': 'Perfume / Beauty',
-          'price': 'LKR 5,900',
-          'subtitle': 'Beauty - Satin Finish',
-          'imageUrl':
-              'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&h=800&q=80',
-          'description':
-              'A satin lip colour with rich pigment, smooth comfort, and a luxury soft-focus sheen.',
-          'sizes': ['One Size'],
-          'composition': ['Satin pigment', 'Nourishing oils', 'Soft waxes'],
-          'careInstructions': [
-            'Close cap tightly after use',
-            'Store away from direct heat',
-          ],
-          'shippingDetails': ['Free standard delivery on all orders.'],
-          'sustainability': ['Cruelty-free formula.'],
-        },
-      ];
-
-      for (final product in perfumeProducts) {
-        batch.set(
-          products.doc(product['id'] as String),
-          product,
-          SetOptions(merge: true),
-        );
-      }
-      await batch.commit();
-      debugPrint('Seeded perfume and beauty products successfully!');
-      await seedAppConfigs();
-    } catch (e) {
-      debugPrint('Error seeding perfume and beauty products: $e');
-      rethrow;
-    }
-  }
-
+  /// Seeds home banners ONLY if the collection is empty.
+  /// This preserves any manual changes made in Firestore console.
   Future<void> seedHomeBanners() async {
     try {
+      final existing = await homeBanners.limit(1).get();
+      if (existing.docs.isNotEmpty) return; // Already has data, skip
+
       final batch = _firestore.batch();
       final banners = [
         {
@@ -1260,63 +911,46 @@ class FirestoreService {
       ];
 
       for (final banner in banners) {
-        batch.set(
-          homeBanners.doc(banner['id'] as String),
-          banner,
-          SetOptions(merge: true),
-        );
+        batch.set(homeBanners.doc(banner['id'] as String), banner);
       }
       await batch.commit();
-      debugPrint('Seeded home banners successfully!');
+      debugPrint('Seeded home banners (first run).');
     } catch (e) {
       debugPrint('Error seeding home banners: $e');
     }
   }
 
+  /// Seeds app config images ONLY if they don't already exist.
   Future<void> seedAppConfigs() async {
     try {
-      await seedHomeBanners();
-      final batch = _firestore.batch();
       final configs = {
-        'cover_page': {
-          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
-        },
-        'featured_series': {
-          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
-        },
-        'notifications_order': {
-          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
-        },
-        'look_trousers': {
-          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
-        },
-        'look_silk': {
-          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
-        },
+        'cover_page': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
+        'featured_series': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
+        'notifications_order': 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
+        'look_trousers': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
+        'look_silk': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
       };
 
-      configs.forEach((key, val) {
-        batch.set(
-          _firestore.collection('config').doc(key),
-          val,
-          SetOptions(merge: true),
-        );
-      });
+      final batch = _firestore.batch();
+      bool needsWrite = false;
 
-      await batch.commit();
-      debugPrint('Seeded app configurations successfully!');
+      for (final entry in configs.entries) {
+        final doc = await _firestore.collection('config').doc(entry.key).get();
+        if (!doc.exists) {
+          batch.set(
+            _firestore.collection('config').doc(entry.key),
+            {'imageUrl': entry.value},
+          );
+          needsWrite = true;
+        }
+      }
+
+      if (needsWrite) {
+        await batch.commit();
+        debugPrint('Seeded missing app configs.');
+      }
     } catch (e) {
       debugPrint('Error seeding app configs: $e');
     }
-  }
-
-  Future<String?> getAppConfigUrl(String key) async {
-    try {
-      final doc = await _firestore.collection('config').doc(key).get();
-      if (doc.exists) {
-        return doc.data()?['imageUrl'] as String?;
-      }
-    } catch (_) {}
-    return null;
   }
 }

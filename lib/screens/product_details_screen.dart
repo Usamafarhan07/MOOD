@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -32,13 +33,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _currentProductData;
   String? _errorMessage;
-  String? _trousersImageUrl;
-  String? _silkImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _loadLookImages();
     if (widget.productData != null && widget.productData!.isNotEmpty) {
       _currentProductData = widget.productData!;
       _initializeProductDetails(_currentProductData!);
@@ -50,30 +48,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
-  Future<void> _loadLookImages() async {
-    final trousers = await _firestoreService.getAppConfigUrl('look_trousers');
-    final silk = await _firestoreService.getAppConfigUrl('look_silk');
-    if (mounted) {
-      setState(() {
-        _trousersImageUrl = trousers;
-        _silkImageUrl = silk;
-      });
-    }
-  }
-
   void _initializeProductDetails(Map<String, dynamic> data) {
     final dynamic rawColors = data['colors'];
     if (rawColors is List) {
-      _colors = rawColors.map((c) {
-        if (c is int) return Color(c);
-        if (c is String) {
-          final hexString = c.startsWith('#')
-              ? c.replaceFirst('#', '0xFF')
-              : '0xFF$c';
-          return Color(int.tryParse(hexString) ?? 0xFF000000);
-        }
-        return const Color(0xFF0D1B2A);
-      }).toList();
+      _colors = rawColors
+          .map((c) {
+            if (c is int) return Color(c);
+            if (c is String) {
+              final cleaned = c
+                  .replaceFirst('#', '')
+                  .replaceFirst('0x', '')
+                  .replaceFirst('0X', '');
+              final hexString = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
+              return Color(int.tryParse(hexString, radix: 16) ?? 0xFF0D1B2A);
+            }
+            return const Color(0xFF0D1B2A);
+          })
+          .toList();
     } else {
       _colors = <Color>[
         const Color(0xFF0D1B2A),
@@ -82,15 +73,30 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         const Color(0xFF704225),
       ];
     }
+    if (_colors.isEmpty) {
+      _colors = <Color>[const Color(0xFF0D1B2A)];
+    }
 
     final dynamic rawSizes = data['sizes'];
     if (rawSizes is List) {
-      _sizes = rawSizes.map((s) => s.toString()).toList();
+      _sizes = rawSizes
+          .map((s) => s.toString().trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
     } else {
       _sizes = <String>['XS', 'S', 'M', 'L', 'XL'];
     }
+    if (_sizes.isEmpty) {
+      _sizes = <String>['One Size'];
+    }
+    if (_selectedColorIndex >= _colors.length) {
+      _selectedColorIndex = 0;
+    }
+    if (_selectedSizeIndex >= _sizes.length) {
+      _selectedSizeIndex = 0;
+    }
     _description =
-        data['description'] as String? ??
+        data['description']?.toString() ??
         'A masterclass in minimalist design. This piece is crafted from ethically sourced premium materials. Featuring a clean, architectural silhouette that transcends seasonal trends.';
   }
 
@@ -101,6 +107,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     });
     try {
       final doc = await _firestoreService.getProductById(id);
+      if (!mounted) return;
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         data['id'] = doc.id;
@@ -117,6 +124,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Failed to load product: $e';
         _isLoading = false;
@@ -209,11 +217,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
     }
 
-    final productData = _currentProductData ?? widget.productData ?? {};
-    final title = productData['title'] ?? 'Structured Wool Belted Coat';
-    final price = productData['price'] ?? 'LKR 9,000';
-    final label = productData['label'] ?? 'AUTUMN/WINTER 24';
-    final imageUrl = productData['imageUrl'] ?? '';
+    final Map<String, dynamic> productData =
+        _currentProductData ?? widget.productData ?? <String, dynamic>{};
+    final title = productData['title']?.toString() ?? 'MOOD Piece';
+    final price = productData['price']?.toString() ?? 'LKR 0';
+    final label = productData['label']?.toString() ?? 'Collection';
+    final imageUrl = productData['imageUrl']?.toString() ?? '';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -277,15 +286,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: const Color(0xFF1E1A18),
-                          );
-                        },
-                      ),
+                      if (imageUrl.startsWith('http'))
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(color: const Color(0xFF1E1A18));
+                          },
+                        )
+                      else
+                        Container(
+                          color: const Color(0xFF1E1A18),
+                          child: const Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.white54,
+                              size: 48,
+                            ),
+                          ),
+                        ),
 
                       // Floating Product Header Overlay
                       Positioned(
@@ -418,7 +437,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   title: title,
                                   imageUrl: imageUrl,
                                   price: priceValue,
-                                  subtitle: label?.toString(),
+                                  subtitle: label,
                                 );
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -444,7 +463,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 _showShareSheet(
                                   context,
                                   title,
-                                  label?.toString() ?? 'PIECE',
+                                  label,
                                   imageUrl,
                                   productData['id']?.toString() ?? title,
                                 );
@@ -617,7 +636,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                               productData['composition'],
                               colorScheme,
                               textTheme,
-                              const ['80% Organic Wool, 20% Recycled Cashmere'],
+                              const ['Composition details are not available.'],
                             ),
                             const SizedBox(height: 6),
                             _buildBulletPoints(
@@ -625,9 +644,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   productData['care'],
                               colorScheme,
                               textTheme,
-                              const [
-                                'Dry clean only. Do not wash. Do not bleach. Cool iron if needed.',
-                              ],
+                              const ['Care details are not available.'],
                             ),
                           ],
                         ),
@@ -650,19 +667,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   productData['shipping'],
                               colorScheme,
                               textTheme,
-                              const [
-                                'Standard Delivery: 3-5 business days. Free on all orders.',
-                              ],
+                              const ['Shipping details are not available.'],
                             ),
                             const SizedBox(height: 6),
                             _buildBulletPoints(
                               productData['sustainability'],
                               colorScheme,
                               textTheme,
-                              const [
-                                'Ethically crafted in our certified carbon-neutral facility.',
-                                'Shipped in 100% biodegradable and zero-plastic packaging.',
-                              ],
+                              const ['Sustainability details are not available.'],
                             ),
                           ],
                         ),
@@ -701,156 +713,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Trousers Card
-                      InkWell(
-                        onTap: () {
-                          context.push(
-                            '/product_details',
-                            extra: {
-                              'title': 'Premium Pleated Trousers',
-                              'price': 'LKR 4500',
-                              'label': 'Premium',
-                              'imageUrl': _trousersImageUrl ?? '',
-                            },
-                          );
-                        },
-                        child: AspectRatio(
-                          aspectRatio: 3 / 4,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (_trousersImageUrl == null)
-                                  Container(
-                                    color: colorScheme.surfaceContainerLow,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        color: colorScheme.primary,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Image.network(
-                                    _trousersImageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      color: const Color(0xFF1E1A18),
-                                    ),
-                                  ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                      colors: <Color>[
-                                        Colors.black.withValues(alpha: 0.6),
-                                        Colors.transparent,
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 24,
-                                  left: 24,
-                                  right: 24,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Premium Pleated Trousers',
-                                              style: textTheme.labelLarge
-                                                  ?.copyWith(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 18,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'LKR 4500',
-                                              style: textTheme.labelSmall
-                                                  ?.copyWith(
-                                                    color: Colors.white
-                                                        .withValues(alpha: 0.8),
-                                                    fontSize: 14,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 48,
-                                        height: 48,
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.add,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Silk Detail Card
-                      AspectRatio(
-                        aspectRatio: 2 / 1,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              if (_silkImageUrl == null)
-                                Container(
-                                  color: colorScheme.surfaceContainerLow,
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                )
-                              else
-                                Image.network(
-                                  _silkImageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    color: const Color(0xFF1E1A18),
-                                  ),
-                                ),
-                              Container(
-                                color: Colors.black.withValues(alpha: 0.2),
-                              ),
-                              Center(
-                                child: Text(
-                                  'EST. 1924',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 4.0,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      _buildRelatedProducts(
+                        context: context,
+                        currentProduct: productData,
+                        theme: theme,
                       ),
                       const SizedBox(height: 32),
 
@@ -878,7 +744,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Part of our 'Earth Conscious' collection, made with 100% recycled wool fibers.",
+                              _summaryText(
+                                productData['sustainability'],
+                                'Sustainability details are not available.',
+                              ),
                               textAlign: TextAlign.center,
                               style: textTheme.labelSmall?.copyWith(
                                 color: const Color(0xFF504441),
@@ -1059,6 +928,160 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
+  Widget _buildRelatedProducts({
+    required BuildContext context,
+    required Map<String, dynamic> currentProduct,
+    required ThemeData theme,
+  }) {
+    final colorScheme = theme.colorScheme;
+    final currentId = currentProduct['id']?.toString() ?? '';
+    final category = currentProduct['category']?.toString();
+    final label = currentProduct['label']?.toString();
+    final stream = category != null && category.isNotEmpty
+        ? _firestoreService.getProducts(category: category)
+        : _firestoreService.getProducts(label: label);
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return SizedBox(
+            height: 220,
+            child: Center(
+              child: CircularProgressIndicator(color: colorScheme.primary),
+            ),
+          );
+        }
+
+        final products = snapshot.data?.docs
+                .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
+                .where((product) {
+                  final id = product['id']?.toString() ?? '';
+                  final imageUrl = product['imageUrl']?.toString() ?? '';
+                  return id != currentId && imageUrl.startsWith('http');
+                })
+                .take(2)
+                .toList() ??
+            <Map<String, dynamic>>[];
+
+        if (products.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          children: [
+            for (int index = 0; index < products.length; index++) ...[
+              _buildRelatedProductCard(
+                context: context,
+                product: products[index],
+                theme: theme,
+              ),
+              if (index != products.length - 1) const SizedBox(height: 24),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRelatedProductCard({
+    required BuildContext context,
+    required Map<String, dynamic> product,
+    required ThemeData theme,
+  }) {
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final title = product['title']?.toString() ?? 'MOOD Piece';
+    final price = product['price']?.toString() ?? 'LKR 0';
+    final imageUrl = product['imageUrl']?.toString() ?? '';
+
+    return InkWell(
+      onTap: () => context.push('/product_details', extra: product),
+      child: AspectRatio(
+        aspectRatio: 3 / 4,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: colorScheme.surfaceContainerLow,
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: colorScheme.primary.withValues(alpha: 0.38),
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: <Color>[
+                      Colors.black.withValues(alpha: 0.62),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 24,
+                left: 24,
+                right: 24,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            price,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.add, color: colorScheme.onPrimary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildExpandableRow({
     required String title,
     required ThemeData theme,
@@ -1154,6 +1177,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         );
       }).toList(),
     );
+  }
+
+  String _summaryText(dynamic data, String fallback) {
+    if (data is List && data.isNotEmpty) {
+      return data.first.toString();
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      return data.trim();
+    }
+    return fallback;
   }
 
   static const String _whatsappSvg = '''
@@ -1256,25 +1289,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            imageUrl,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 60,
-                                height: 60,
-                                color: colorScheme.primary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                child: Icon(
-                                  Icons.image,
-                                  color: colorScheme.primary,
-                                ),
-                              );
-                            },
-                          ),
+                          child: imageUrl.startsWith('http')
+                              ? Image.network(
+                                  imageUrl,
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _shareImageFallback(colorScheme);
+                                  },
+                                )
+                              : _shareImageFallback(colorScheme),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -1517,6 +1542,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _shareImageFallback(ColorScheme colorScheme) {
+    return Container(
+      width: 60,
+      height: 60,
+      color: colorScheme.primary.withValues(alpha: 0.1),
+      child: Icon(Icons.image, color: colorScheme.primary),
     );
   }
 
