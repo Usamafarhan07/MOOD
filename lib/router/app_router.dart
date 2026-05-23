@@ -9,6 +9,7 @@ import 'package:mood/screens/product_listing_screen.dart';
 import 'package:mood/screens/product_details_screen.dart';
 import 'package:mood/screens/shopping_cart_screen.dart';
 import 'package:mood/screens/checkout_screen.dart';
+import 'package:mood/screens/category_products_screen.dart';
 import 'package:mood/screens/order_confirmation_screen.dart';
 import 'package:mood/screens/order_details_screen.dart';
 import 'package:mood/screens/order_history_screen.dart';
@@ -49,6 +50,15 @@ GoRouter createAppRouter() {
         builder: (context, state) => const RegistrationScreen(),
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/category/:category',
+        builder: (context, state) {
+          final category = state.pathParameters['category'] ?? '';
+          return CategoryProductsScreen(
+            categoryName: Uri.decodeComponent(category),
+          );
+        },
+      ),
       GoRoute(
         path: '/products',
         builder: (context, state) => const ProductListingScreen(),

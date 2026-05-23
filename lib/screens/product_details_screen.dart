@@ -32,10 +32,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _currentProductData;
   String? _errorMessage;
+  String? _trousersImageUrl;
+  String? _silkImageUrl;
 
   @override
   void initState() {
     super.initState();
+    _loadLookImages();
     if (widget.productData != null && widget.productData!.isNotEmpty) {
       _currentProductData = widget.productData!;
       _initializeProductDetails(_currentProductData!);
@@ -44,6 +47,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     } else {
       _currentProductData = {};
       _initializeProductDetails({});
+    }
+  }
+
+  Future<void> _loadLookImages() async {
+    final trousers = await _firestoreService.getAppConfigUrl('look_trousers');
+    final silk = await _firestoreService.getAppConfigUrl('look_silk');
+    if (mounted) {
+      setState(() {
+        _trousersImageUrl = trousers;
+        _silkImageUrl = silk;
+      });
     }
   }
 
@@ -199,9 +213,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final title = productData['title'] ?? 'Structured Wool Belted Coat';
     final price = productData['price'] ?? 'LKR 9,000';
     final label = productData['label'] ?? 'AUTUMN/WINTER 24';
-    final imageUrl =
-        productData['imageUrl'] ??
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuANAwip_SplPsYu1rJwkTzQhd_dzGfh7uwXF0FI3F-lHpKmm5fpStr79od52os4NJR4zKgA6YLcksH08K2xjqwFQ_t1UtmjWQ1dHnpN_mwWn62EzDGyfWzFZEtCXUH14YWQn1CZS7i3FWARs0HcMcn_lCmVj1ETrrheRRAmjb8BUn4ZMZdBRJWc645GfXKUxY_Pzln4Cwihl3FeCLSR7D_OIzUzKHgS4gZonctdAlCElek4Ccedqtuc8Yna01YsiQB3fB40mQN1EKs';
+    final imageUrl = productData['imageUrl'] ?? '';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -265,7 +277,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(imageUrl, fit: BoxFit.cover),
+                      Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: const Color(0xFF1E1A18),
+                          );
+                        },
+                      ),
 
                       // Floating Product Header Overlay
                       Positioned(
@@ -392,14 +412,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                               onTap: () async {
                                 final productId =
                                     productData['id']?.toString() ?? title;
-                                final priceValue =
-                                    int.tryParse(
-                                      price.toString().replaceAll(
-                                        RegExp(r'[^0-9]'),
-                                        '',
-                                      ),
-                                    ) ??
-                                    0;
+                                final priceValue = parsePriceValue(price);
                                 await _firestoreService.addWishlistItem(
                                   productId: productId,
                                   title: title,
@@ -697,8 +710,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                               'title': 'Premium Pleated Trousers',
                               'price': 'LKR 4500',
                               'label': 'Premium',
-                              'imageUrl':
-                                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
+                              'imageUrl': _trousersImageUrl ?? '',
                             },
                           );
                         },
@@ -709,10 +721,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Image.network(
-                                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
-                                  fit: BoxFit.cover,
-                                ),
+                                if (_trousersImageUrl == null)
+                                  Container(
+                                    color: colorScheme.surfaceContainerLow,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: colorScheme.primary,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Image.network(
+                                    _trousersImageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      color: const Color(0xFF1E1A18),
+                                    ),
+                                  ),
                                 Container(
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
@@ -792,10 +817,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.network(
-                                'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
-                                fit: BoxFit.cover,
-                              ),
+                              if (_silkImageUrl == null)
+                                Container(
+                                  color: colorScheme.surfaceContainerLow,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Image.network(
+                                  _silkImageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: const Color(0xFF1E1A18),
+                                  ),
+                                ),
                               Container(
                                 color: Colors.black.withValues(alpha: 0.2),
                               ),
@@ -900,11 +938,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                     child: ElevatedButton(
                       onPressed: () async {
-                        final priceStr = price.replaceAll(
-                          RegExp(r'[^0-9]'),
-                          '',
-                        );
-                        final unitPrice = int.tryParse(priceStr) ?? 0;
+                        final unitPrice = parsePriceValue(price);
                         String colorName = 'Selected Color';
                         if (_colors[_selectedColorIndex] ==
                             const Color(0xFF0D1B2A)) {

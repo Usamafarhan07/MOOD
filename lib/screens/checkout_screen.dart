@@ -13,16 +13,43 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  String _selectedPaymentMethod = 'visa'; // 'visa' or 'cod'
+  String _selectedPaymentMethod = 'cod'; // 'visa' or 'cod'
   final FirestoreService _firestoreService = FirestoreService();
   bool _isProcessing = false;
   String? _validationError;
+  UserProfile? _profile;
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _postalCodeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCheckoutProfile();
+  }
+
+  Future<void> _loadCheckoutProfile() async {
+    try {
+      final profile = await _firestoreService.getUserProfile();
+      if (!mounted) return;
+      setState(() {
+        _profile = profile;
+        if (profile?.paymentMethod?['last4'] != null) {
+          _selectedPaymentMethod = 'visa';
+        }
+        _fullNameController.text = profile?.fullName ?? '';
+        _phoneController.text = profile?.phone ?? '';
+        _addressController.text = profile?.address ?? '';
+      });
+    } on FirebaseAuthException {
+      if (mounted) context.go('/login');
+    } catch (_) {
+      // Keep checkout usable with manual shipping details if profile loading fails.
+    }
+  }
 
   @override
   void dispose() {
@@ -82,6 +109,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final delivery = 500;
         final tax = (subtotal * 0.02).toInt(); // 2% dummy tax
         final total = subtotal + delivery + tax;
+        final savedPayment = _profile?.paymentMethod;
+        final savedCardLast4 = savedPayment?['last4']?.toString();
 
         String formatCurrency(int amount) {
           return 'LKR ${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
@@ -440,13 +469,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 // Payment Method
                 _buildSectionHeader('03. PAYMENT METHOD', theme),
                 const SizedBox(height: 24),
-                _buildPaymentOption(
-                  id: 'visa',
-                  title: 'Visa',
-                  subtitle: 'Ending in 8842',
-                  theme: theme,
-                ),
-                const SizedBox(height: 16),
+                if (savedCardLast4 != null) ...[
+                  _buildPaymentOption(
+                    id: 'visa',
+                    title: 'Visa',
+                    subtitle: 'Ending in $savedCardLast4',
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 _buildPaymentOption(
                   id: 'cod',
                   title: 'Cash on Delivery',
@@ -524,6 +555,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               );
                               return;
                             }
+                            if (_selectedPaymentMethod == 'visa' &&
+                                savedCardLast4 == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Please add a card in your profile or choose Cash on Delivery',
+                                  ),
+                                  backgroundColor: colorScheme.error,
+                                ),
+                              );
+                              return;
+                            }
 
                             final user = FirebaseAuth.instance.currentUser;
                             if (user == null) {
@@ -562,15 +605,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 totalPrice: total,
                                 subtotal: subtotal,
                                 shippingFee: delivery,
+                                taxFee: tax,
                                 orderStatus: 'pending',
                                 createdAt: DateTime.now(),
-                                paymentMethod: _selectedPaymentMethod,
+                                paymentMethod: _selectedPaymentMethod == 'visa'
+                                    ? 'visa_ending_$savedCardLast4'
+                                    : 'cod',
                                 shippingAddress: shippingAddress,
                               );
 
                               final orderId = await _firestoreService
-                                  .createOrder(order);
-                              await _firestoreService.clearCart();
+                                  .createOrderAndClearCart(order);
 
                               if (!context.mounted) return;
                               context.push('/order_confirmation/$orderId');

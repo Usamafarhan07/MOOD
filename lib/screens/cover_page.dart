@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mood/services/firestore_service.dart';
 
 class CoverPage extends StatelessWidget {
   const CoverPage({super.key});
@@ -17,9 +18,35 @@ class CoverPage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Background Image
-          Image.network(
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
-            fit: BoxFit.cover,
+          FutureBuilder<String?>(
+            future: FirestoreService().getAppConfigUrl('cover_page'),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  color: colorScheme.surface,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                );
+              }
+              final imageUrl = snapshot.data;
+              if (imageUrl == null || imageUrl.isEmpty) {
+                return Container(
+                  color: const Color(0xFF1E1A18),
+                );
+              }
+              return Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: const Color(0xFF1E1A18),
+                  );
+                },
+              );
+            },
           ),
 
           // Subtle overlay for depth

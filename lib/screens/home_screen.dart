@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mood/services/firestore_service.dart';
 import 'package:mood/widgets/custom_drawer.dart';
 
@@ -18,46 +17,149 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   final FirestoreService _firestoreService = FirestoreService();
   String _selectedCategory = 'All Items';
+  late Future<List<Map<String, dynamic>>> _productsFuture;
 
   late final PageController _pageController;
   int _activePage = 0;
   Timer? _autoSlideTimer;
 
-  final List<Map<String, String>> _bannerItems = [
-    {
-      'title': 'Summer Archive',
-      'subtitle':
-          'A curated selection of timeless silhouettes for the digital modernist.',
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCtOnOOXGA2BDQydlnHCriYfQhXOuDXPi0asqNWUtsOsiqzq04udrkH3ks1A1LnMBCgNkcjN0LwOnDyMHeA4uVRbGMffd3N59C_ix6Gdp2nwjQHUYb03VoEX9AaR_Ci_ev0xmR2CsipxnX6I9PXOD0FNzXl6KyQkjeZCroPE6RDVI-1bZRLrhRupZx-u6feWiBpPJHrAHhDrUoaHYkXsYBufQae32TE-rg-hReKolFDH9xPRVcGh9IcYTGdC5ZUXyqk6k_8I3CLpeQ',
-    },
-    {
-      'title': 'Nocturnal Atelier',
-      'subtitle':
-          'Explore avant-garde designs crafted with meticulous artisan precision.',
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
-    },
-    {
-      'title': 'Modern Simplicity',
-      'subtitle':
-          'Elevated essentials that balance everyday comfort and classic elegance.',
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuANAwip_SplPsYu1rJwkTzQhd_dzGfh7uwXF0FI3F-lHpKmm5fpStr79od52os4NJR4zKgA6YLcksH08K2xjqwFQ_t1UtmjWQ1dHnpN_mwWn62EzDGyfWzFZEtCXUH14YWQn1CZS7i3FWARs0HcMcn_lCmVj1ETrrheRRAmjb8BUn4ZMZdBRJWc645GfXKUxY_Pzln4Cwihl3FeCLSR7D_OIzUzKHgS4gZonctdAlCElek4Ccedqtuc8Yna01YsiQB3fB40mQN1EKs',
-    },
-  ];
+  late List<Map<String, String>> _bannerItems;
 
   @override
   void initState() {
     super.initState();
+    _bannerItems = [];
+    _productsFuture = _loadProducts(_selectedCategory);
     _pageController = PageController(initialPage: 0);
+    _loadHomeBanners();
+    _seedPerfumeBeautyProducts();
     _startAutoSlide();
+  }
+
+  Future<void> _seedPerfumeBeautyProducts() async {
+    try {
+      await _firestoreService.seedPerfumeBeautyProducts();
+      if (!mounted || _selectedCategory != 'All Items') return;
+      setState(() {
+        _productsFuture = _loadProducts(_selectedCategory);
+      });
+    } catch (_) {
+      // Home still shows local perfume products if Firestore write is blocked.
+    }
+  }
+
+  Future<void> _loadHomeBanners() async {
+    try {
+      final snapshot = await _firestoreService
+          .getHomeBanners()
+          .first
+          .timeout(const Duration(seconds: 8));
+
+      final docs = snapshot.docs.toList()
+        ..sort((a, b) {
+          final aOrder = (a.data()['order'] as num?)?.toInt() ?? 999;
+          final bOrder = (b.data()['order'] as num?)?.toInt() ?? 999;
+          return aOrder.compareTo(bOrder);
+        });
+
+      final banners = docs
+          .map((doc) {
+            final data = doc.data();
+            final isActive = data['isActive'];
+            final imageUrl = data['imageUrl']?.toString().trim() ?? '';
+            final title = data['title']?.toString().trim() ?? '';
+            final subtitle = data['subtitle']?.toString().trim() ?? '';
+            if (isActive == false || !imageUrl.startsWith('http')) {
+              return null;
+            }
+
+            return <String, String>{
+              'title': title.isNotEmpty ? title : 'MOOD Edit',
+              'subtitle': subtitle.isNotEmpty
+                  ? subtitle
+                  : 'A curated selection for the modern wardrobe.',
+              'imageUrl': imageUrl,
+            };
+          })
+          .whereType<Map<String, String>>()
+          .toList();
+
+      if (!mounted || banners.isEmpty) return;
+
+      setState(() {
+        _bannerItems = banners;
+        _activePage = 0;
+      });
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
+    } catch (_) {
+      // Keep fallback posters when Firestore banners are unavailable.
+    }
+  }
+
+  void _selectCategory(String category) {
+    if (_selectedCategory == category) return;
+    setState(() {
+      _selectedCategory = category;
+      _productsFuture = _loadProducts(category);
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _loadProducts(String category) async {
+    try {
+      final snapshot = await _firestoreService
+          .getProducts(category: category)
+          .first
+          .timeout(const Duration(seconds: 8));
+      final remoteProducts = snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            return _withUsableProductImage({'id': doc.id, ...data});
+          })
+          .where(_hasProductImage)
+          .toList();
+
+      final matchingRemote = remoteProducts
+          .where((product) => _productMatchesCategory(product, category))
+          .toList();
+
+      return matchingRemote;
+    } catch (_) {
+      // Firestore is the source of truth for products.
+    }
+
+    return <Map<String, dynamic>>[];
+  }
+
+  Map<String, dynamic> _withUsableProductImage(Map<String, dynamic> product) {
+    return product;
+  }
+
+  bool _hasProductImage(Map<String, dynamic> product) {
+    final imageUrl = product['imageUrl']?.toString().trim() ?? '';
+    return imageUrl.startsWith('http');
+  }
+
+  bool _productMatchesCategory(Map<String, dynamic> product, String category) {
+    if (category == 'All Items') return true;
+    final productCategory = product['category']?.toString().toLowerCase() ?? '';
+    final productLabel = product['label']?.toString().toLowerCase() ?? '';
+    final selected = category.toLowerCase();
+    if (selected == 'perfume / beauty') {
+      return productCategory == selected ||
+          productCategory == 'beauty' ||
+          productCategory == 'perfume' ||
+          productLabel == 'beauty' ||
+          productLabel == 'perfume';
+    }
+    return productCategory == selected || productLabel == selected;
   }
 
   void _startAutoSlide() {
     _autoSlideTimer?.cancel();
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_pageController.hasClients) {
+      if (_pageController.hasClients && _bannerItems.isNotEmpty) {
         final nextPage = (_activePage + 1) % _bannerItems.length;
         _pageController.animateToPage(
           nextPage,
@@ -191,7 +293,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 500,
                 child: Stack(
                   children: [
-                    ClipRRect(
+                    if (_bannerItems.isEmpty)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      )
+                    else ...[
+                      ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: PageView.builder(
                         controller: _pageController,
@@ -210,9 +325,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Image.network(
-                                  item['imageUrl']!,
+                                _PremiumNetworkImage(
+                                  imageUrl: item['imageUrl']!,
                                   fit: BoxFit.cover,
+                                  colorScheme: colorScheme,
                                 ),
                                 Container(
                                   decoration: BoxDecoration(
@@ -340,6 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -352,17 +469,22 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: ['All Items', 'Women', 'Men', 'Kids', 'Accessories']
-                      .map((cat) {
+                  children:
+                      [
+                        'All Items',
+                        'Women',
+                        'Men',
+                        'Kids',
+                        'Accessories',
+                        'Perfume / Beauty',
+                      ].map((cat) {
                         return Padding(
                           padding: EdgeInsets.only(
-                            right: cat != 'Accessories' ? 12 : 0,
+                            right: cat != 'Perfume / Beauty' ? 12 : 0,
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              setState(() {
-                                _selectedCategory = cat;
-                              });
+                              _selectCategory(cat);
                             },
                             child: _buildCategoryChip(
                               cat,
@@ -372,8 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         );
-                      })
-                      .toList(),
+                      }).toList(),
                 ),
               ),
             ),
@@ -416,10 +537,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Product Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _firestoreService.getProducts(
-                  category: _selectedCategory,
-                ),
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _productsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
@@ -429,24 +548,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final products = snapshot.data!.docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return {'id': doc.id, ...data};
-                  }).toList();
+                  final products = snapshot.data ?? <Map<String, dynamic>>[];
 
                   final filteredProducts = products.where((product) {
-                    final productCat =
-                        (product['category'] as String?)?.toLowerCase() ?? '';
-                    final productLabel =
-                        (product['label'] as String?)?.toLowerCase() ?? '';
-                    final matchesCategory =
-                        _selectedCategory == 'All Items' ||
-                        productCat == _selectedCategory.toLowerCase() ||
-                        (_selectedCategory == 'Accessories' &&
-                            productLabel == 'accessories');
-                    final matchesSearch = product['title']!
-                        .toLowerCase()
-                        .contains(_searchQuery.toLowerCase());
+                    final title = product['title']?.toString() ?? '';
+                    final subtitle = product['subtitle']?.toString() ?? '';
+                    final matchesCategory = _productMatchesCategory(
+                      product,
+                      _selectedCategory,
+                    );
+                    final matchesSearch =
+                        title.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        ) ||
+                        subtitle.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        );
                     return matchesCategory && matchesSearch;
                   }).toList();
 
@@ -473,11 +590,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Expanded(
                             child: _buildProductCard(
-                              imageUrl: filteredProducts[i]['imageUrl']!,
-                              title: filteredProducts[i]['title']!,
-                              subtitle: filteredProducts[i]['subtitle']!,
-                              price: filteredProducts[i]['price']!,
-                              productId: filteredProducts[i]['id']!.toString(),
+                              imageUrl:
+                                  filteredProducts[i]['imageUrl']?.toString() ??
+                                  '',
+                              title:
+                                  filteredProducts[i]['title']?.toString() ??
+                                  'MOOD Piece',
+                              subtitle:
+                                  filteredProducts[i]['subtitle']?.toString() ??
+                                  filteredProducts[i]['category']?.toString() ??
+                                  'Luxury edit',
+                              price:
+                                  filteredProducts[i]['price']?.toString() ??
+                                  'LKR 0',
+                              productId:
+                                  filteredProducts[i]['id']?.toString() ??
+                                  filteredProducts[i]['title']?.toString() ??
+                                  'mood-piece-$i',
                               isFavorite: false,
                               theme: theme,
                               context: context,
@@ -491,13 +620,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                     padding: const EdgeInsets.only(top: 48.0),
                                     child: _buildProductCard(
                                       imageUrl:
-                                          filteredProducts[i + 1]['imageUrl']!,
-                                      title: filteredProducts[i + 1]['title']!,
+                                          filteredProducts[i + 1]['imageUrl']
+                                              ?.toString() ??
+                                          '',
+                                      title:
+                                          filteredProducts[i + 1]['title']
+                                              ?.toString() ??
+                                          'MOOD Piece',
                                       subtitle:
-                                          filteredProducts[i + 1]['subtitle']!,
-                                      price: filteredProducts[i + 1]['price']!,
-                                      productId: filteredProducts[i + 1]['id']!
-                                          .toString(),
+                                          filteredProducts[i + 1]['subtitle']
+                                              ?.toString() ??
+                                          filteredProducts[i + 1]['category']
+                                              ?.toString() ??
+                                          'Luxury edit',
+                                      price:
+                                          filteredProducts[i + 1]['price']
+                                              ?.toString() ??
+                                          'LKR 0',
+                                      productId:
+                                          filteredProducts[i + 1]['id']
+                                              ?.toString() ??
+                                          filteredProducts[i + 1]['title']
+                                              ?.toString() ??
+                                          'mood-piece-${i + 1}',
                                       isFavorite: false,
                                       theme: theme,
                                       context: context,
@@ -698,7 +843,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
           AspectRatio(
             aspectRatio: 3 / 4,
             child: Container(
@@ -711,8 +855,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(imageUrl, fit: BoxFit.cover),
-                    // Favorite Button
+                    _PremiumNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      colorScheme: theme.colorScheme,
+                    ),
                     Positioned(
                       top: 12,
                       right: 12,
@@ -733,48 +880,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                price,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ],
+          Text(
+            price,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: theme.colorScheme.primary,
+            ),
           ),
         ],
       ),
@@ -813,6 +944,60 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PremiumNetworkImage extends StatelessWidget {
+  final String imageUrl;
+  final BoxFit fit;
+  final ColorScheme colorScheme;
+
+  const _PremiumNetworkImage({
+    required this.imageUrl,
+    required this.fit,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.trim().isEmpty) {
+      return _fallback();
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          color: colorScheme.surfaceContainerLow,
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) => _fallback(),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      color: colorScheme.surfaceContainerLow,
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: colorScheme.primary.withValues(alpha: 0.38),
+          size: 30,
+        ),
       ),
     );
   }
@@ -861,8 +1046,7 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
         });
 
         if (_isFavorite) {
-          final priceValue =
-              int.tryParse(widget.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+          final priceValue = parsePriceValue(widget.price);
           widget.firestoreService.addWishlistItem(
             productId: widget.productId,
             title: widget.title,

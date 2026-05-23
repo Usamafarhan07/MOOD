@@ -50,7 +50,10 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined, color: colorScheme.primary),
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: colorScheme.primary,
+            ),
             onPressed: () {
               context.push('/notifications');
             },
@@ -126,7 +129,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                           ),
                           border: InputBorder.none,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                          ),
                         ),
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.primary,
@@ -143,19 +148,33 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
-                children: ['All Items', 'Outerwear', 'Knitwear', 'Accessories', 'Footwear'].map((filter) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: filter != 'Footwear' ? 12 : 0),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedFilter = filter;
-                        });
-                      },
-                      child: _buildCategoryChip(filter, _selectedFilter == filter, theme),
-                    ),
-                  );
-                }).toList(),
+                children:
+                    [
+                      'All Items',
+                      'Outerwear',
+                      'Knitwear',
+                      'Accessories',
+                      'Footwear',
+                      'Perfume / Beauty',
+                    ].map((filter) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: filter != 'Perfume / Beauty' ? 12 : 0,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedFilter = filter;
+                            });
+                          },
+                          child: _buildCategoryChip(
+                            filter,
+                            _selectedFilter == filter,
+                            theme,
+                          ),
+                        ),
+                      );
+                    }).toList(),
               ),
             ),
             const SizedBox(height: 40),
@@ -176,16 +195,18 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
 
                   final products = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    return {
-                      'id': doc.id,
-                      ...data,
-                    };
+                    return {'id': doc.id, ...data};
                   }).toList();
 
-                  final itemWidth = (MediaQuery.of(context).size.width - 16 - 48) / 2;
+                  final itemWidth =
+                      (MediaQuery.of(context).size.width - 16 - 48) / 2;
                   final filteredProducts = products.where((product) {
-                    final matchesFilter = _selectedFilter == 'All Items' || product['label'] == _selectedFilter;
-                    final matchesSearch = product['title']!.toLowerCase().contains(_searchQuery.toLowerCase());
+                    final matchesFilter =
+                        _selectedFilter == 'All Items' ||
+                        product['label'] == _selectedFilter;
+                    final matchesSearch = product['title']!
+                        .toLowerCase()
+                        .contains(_searchQuery.toLowerCase());
                     return matchesFilter && matchesSearch;
                   }).toList();
 
@@ -197,7 +218,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         child: Text(
                           'No products found.',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         ),
                       ),
@@ -239,9 +262,35 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
-                        fit: BoxFit.cover,
+                      FutureBuilder<String?>(
+                        future: _firestoreService.getAppConfigUrl('featured_series'),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return Container(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            );
+                          }
+                          final imageUrl = snapshot.data;
+                          if (imageUrl == null || imageUrl.isEmpty) {
+                            return Container(
+                              color: const Color(0xFF1E1A18),
+                            );
+                          }
+                          return Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: const Color(0xFF1E1A18),
+                              );
+                            },
+                          );
+                        },
                       ),
                       Container(
                         decoration: BoxDecoration(
@@ -290,7 +339,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                                 ),
                                 boxShadow: <BoxShadow>[
                                   BoxShadow(
-                                    color: colorScheme.secondary.withValues(alpha: 0.2),
+                                    color: colorScheme.secondary.withValues(
+                                      alpha: 0.2,
+                                    ),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -301,7 +352,10 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
-                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(50),
                                   ),
@@ -328,7 +382,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
           ],
         ),
       ),
-      
+
       // Bottom Navigation Bar (reusing style from Home)
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -348,17 +402,32 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNavItem(Icons.home, 'HOME', false, () {
                       context.go('/home');
                     }, colorScheme),
-                    _buildNavItem(Icons.search, 'SEARCH', true, () {}, colorScheme),
-                    _buildNavItem(Icons.shopping_cart_outlined, 'CART', false, () {
-                      context.go('/cart');
-                    }, colorScheme),
+                    _buildNavItem(
+                      Icons.search,
+                      'SEARCH',
+                      true,
+                      () {},
+                      colorScheme,
+                    ),
+                    _buildNavItem(
+                      Icons.shopping_cart_outlined,
+                      'CART',
+                      false,
+                      () {
+                        context.go('/cart');
+                      },
+                      colorScheme,
+                    ),
                     _buildNavItem(Icons.person_outline, 'PROFILE', false, () {
                       context.go('/profile');
                     }, colorScheme),
@@ -378,7 +447,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
       curve: Curves.easeInOut,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       decoration: BoxDecoration(
-        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHigh,
+        color: isSelected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(50),
         boxShadow: isSelected
             ? <BoxShadow>[
@@ -386,14 +457,16 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                   color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
-                )
+                ),
               ]
             : null,
       ),
       child: Text(
         label.toUpperCase(),
         style: theme.textTheme.labelSmall?.copyWith(
-          color: isSelected ? theme.colorScheme.surface : theme.colorScheme.primary,
+          color: isSelected
+              ? theme.colorScheme.surface
+              : theme.colorScheme.primary,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
           fontSize: 12,
@@ -418,70 +491,73 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         context.push('/product_details', extra: productData);
       },
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AspectRatio(
-          aspectRatio: 3 / 4,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 3 / 4,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(imageUrl, fit: BoxFit.cover),
                 ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: _FavoriteButton(
-                  initialIsFavorite: isFavorite,
-                  theme: theme,
-                  title: title,
-                  price: price,
-                  imageUrl: imageUrl,
-                  productId: productId,
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: _FavoriteButton(
+                    initialIsFavorite: isFavorite,
+                    theme: theme,
+                    title: title,
+                    price: price,
+                    imageUrl: imageUrl,
+                    productId: productId,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          label.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.primary.withValues(alpha: 0.6),
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
+          const SizedBox(height: 12),
+          Text(
+            label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          price,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: theme.colorScheme.primary.withValues(alpha: 0.8),
+          const SizedBox(height: 4),
+          Text(
+            price,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.colorScheme.primary.withValues(alpha: 0.8),
+            ),
           ),
-        ),
-      ],
-    ),
+        ],
+      ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap, ColorScheme colorScheme) {
+  Widget _buildNavItem(
+    IconData icon,
+    String label,
+    bool isActive,
+    VoidCallback onTap,
+    ColorScheme colorScheme,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -489,7 +565,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
+            color: isActive
+                ? colorScheme.secondary
+                : colorScheme.primary.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -499,7 +577,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               fontSize: 10,
               letterSpacing: 1.5,
               fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              color: isActive ? colorScheme.secondary : colorScheme.primary.withValues(alpha: 0.4),
+              color: isActive
+                  ? colorScheme.secondary
+                  : colorScheme.primary.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -540,7 +620,7 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
   }
 
   Future<void> _updateWishlist(bool isFavorite) async {
-    final priceValue = int.tryParse(widget.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final priceValue = parsePriceValue(widget.price);
     if (isFavorite) {
       await _firestoreService.addWishlistItem(
         productId: widget.productId,
@@ -558,7 +638,9 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: widget.theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.8),
+        color: widget.theme.colorScheme.surfaceContainerLow.withValues(
+          alpha: 0.8,
+        ),
         shape: BoxShape.circle,
       ),
       child: ClipOval(
@@ -578,11 +660,17 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(_isFavorite ? 'Saved to Wishlist' : 'Removed from Wishlist'),
+                  content: Text(
+                    _isFavorite ? 'Saved to Wishlist' : 'Removed from Wishlist',
+                  ),
                   behavior: SnackBarBehavior.floating,
-                  backgroundColor: _isFavorite ? widget.theme.colorScheme.primary : widget.theme.colorScheme.error,
+                  backgroundColor: _isFavorite
+                      ? widget.theme.colorScheme.primary
+                      : widget.theme.colorScheme.error,
                   duration: const Duration(seconds: 2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               );
             },

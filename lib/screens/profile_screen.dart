@@ -26,7 +26,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _cardholderController = TextEditingController();
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _expiryMonthController = TextEditingController();
@@ -45,7 +49,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _phoneController.dispose();
     _addressController.dispose();
     _emailController.dispose();
+    _currentPasswordController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _cardholderController.dispose();
     _cardNumberController.dispose();
     _expiryMonthController.dispose();
@@ -57,8 +63,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     try {
       var profile = await _firestoreService.getUserProfile();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final authEmail = currentUser?.email ?? '';
+      final authDisplayName = currentUser?.displayName?.trim() ?? '';
+      final fallbackName = _nameFromAuth(
+        displayName: authDisplayName,
+        email: authEmail,
+      );
+
+      if (profile == null && currentUser != null) {
+        await _firestoreService.createUserProfile(
+          uid: currentUser.uid,
+          fullName: fallbackName,
+          email: authEmail,
+        );
+        profile = await _firestoreService.getUserProfile();
+      }
 
       if (profile != null) {
+        final repairedName = profile.fullName.trim().isEmpty
+            ? fallbackName
+            : profile.fullName.trim();
+        final repairedEmail =
+            profile.email.trim().isEmpty && authEmail.isNotEmpty
+            ? authEmail
+            : profile.email.trim();
+
+        if (repairedName != profile.fullName ||
+            repairedEmail != profile.email) {
+          await _firestoreService.updateUserProfile(
+            fullName: repairedName,
+            phone: profile.phone,
+            address: profile.address,
+            email: repairedEmail,
+          );
+          profile = UserProfile(
+            uid: profile.uid,
+            fullName: repairedName,
+            email: repairedEmail,
+            phone: profile.phone,
+            address: profile.address,
+            profileImageBase64: profile.profileImageBase64,
+            paymentMethod: profile.paymentMethod,
+            createdAt: profile.createdAt,
+            ordersCount: profile.ordersCount,
+            points: profile.points,
+          );
+        }
+
         // MIGRATION: Dynamically compute actual orders and points
         final ordersSnapshot = await FirebaseFirestore.instance
             .collection('orders')
@@ -90,6 +142,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       if (mounted) {
+        if (profile != null &&
+            authEmail.isNotEmpty &&
+            profile.email != authEmail) {
+          await _firestoreService.updateUserProfile(
+            fullName: profile.fullName,
+            phone: profile.phone,
+            address: profile.address,
+            email: authEmail,
+          );
+          profile = UserProfile(
+            uid: profile.uid,
+            fullName: profile.fullName,
+            email: authEmail,
+            phone: profile.phone,
+            address: profile.address,
+            profileImageBase64: profile.profileImageBase64,
+            paymentMethod: profile.paymentMethod,
+            createdAt: profile.createdAt,
+            ordersCount: profile.ordersCount,
+            points: profile.points,
+          );
+        }
+
         setState(() {
           _profile = profile;
           if (profile != null) {
@@ -97,7 +172,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _phoneController.text = profile.phone;
             _addressController.text = profile.address;
             _emailController.text = profile.email;
+            _currentPasswordController.clear();
             _passwordController.clear();
+            _confirmPasswordController.clear();
           }
           _isLoading = false;
         });
@@ -126,11 +203,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _pickImage() async {
+  String _nameFromAuth({required String displayName, required String email}) {
+    if (displayName.trim().isNotEmpty) return displayName.trim();
+    if (email.trim().isEmpty) return 'User Name';
+    final emailName = email.split('@').first.trim();
+    if (emailName.isEmpty) return 'User Name';
+    return emailName
+        .split(RegExp(r'[._\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String get _profileDisplayName {
+    final profileName = _profile?.fullName.trim() ?? '';
+    if (profileName.isNotEmpty) return profileName;
+    final user = FirebaseAuth.instance.currentUser;
+    return _nameFromAuth(
+      displayName: user?.displayName?.trim() ?? '',
+      email: user?.email ?? _profile?.email ?? '',
+    );
+  }
+
+  void _showProfilePhotoOptions() {
+    final hasPhoto =
+        _profile?.profileImageBase64 != null &&
+        _profile!.profileImageBase64!.isNotEmpty;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Profile Photo',
+                  style: GoogleFonts.notoSerif(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildPhotoAction(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Take Photo',
+                  theme: theme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildPhotoAction(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Choose from Gallery',
+                  theme: theme,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                if (hasPhoto) ...[
+                  const SizedBox(height: 10),
+                  _buildPhotoAction(
+                    icon: Icons.delete_outline,
+                    label: 'Remove Photo',
+                    theme: theme,
+                    isDestructive: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _removeProfilePhoto();
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     try {
       final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 600,
         maxHeight: 600,
         imageQuality: 80,
@@ -190,16 +360,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _removeProfilePhoto() async {
+    if (_profile == null) return;
+
+    try {
+      setState(() => _isUploading = true);
+      await _firestoreService.removeProfileImage();
+
+      if (!mounted) return;
+      setState(() {
+        _profile = UserProfile(
+          uid: _profile!.uid,
+          fullName: _profile!.fullName,
+          email: _profile!.email,
+          phone: _profile!.phone,
+          address: _profile!.address,
+          paymentMethod: _profile!.paymentMethod,
+          createdAt: _profile!.createdAt,
+          ordersCount: _profile!.ordersCount,
+          points: _profile!.points,
+        );
+        _isUploading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile photo removed')));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove photo: ${e.toString()}')),
+      );
+    }
+  }
+
   void _showEditProfileSheet(BuildContext context) {
+    _currentPasswordController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+
     String? validationError;
+    final parentContext = context;
 
     bool validateProfileForm() {
-      if (_nameController.text.trim().isEmpty &&
-          _phoneController.text.trim().isEmpty &&
-          _addressController.text.trim().isEmpty &&
-          _emailController.text.trim().isEmpty &&
-          _passwordController.text.isEmpty) {
-        validationError = 'At least one field must be provided';
+      validationError = null;
+      final name = _nameController.text.trim();
+
+      if (name.isEmpty) {
+        validationError = 'Full name cannot be empty';
         return false;
       }
 
@@ -212,206 +420,524 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         final theme = Theme.of(context);
-        return Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Edit Profile',
-                  style: GoogleFonts.notoSerif(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
+        return StatefulBuilder(
+          builder: (context, refreshSheet) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
                 ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    hintText: 'Enter your full name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Edit Profile',
+                      style: GoogleFonts.notoSerif(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone',
-                    hintText: 'Enter your phone number',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _addressController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Address',
-                    hintText: 'Enter your delivery address',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter new email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    hintText: 'Leave empty to keep current',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!validateProfileForm()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            validationError ?? 'Please fill in all fields',
-                          ),
-                          backgroundColor: theme.colorScheme.error,
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Full Name',
+                        hintText: 'Enter your full name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      // 1. Perform high-security Auth updates before persisting the profile email.
-                      final user = FirebaseAuth.instance.currentUser;
-                      bool authUpdated = true;
-                      String? authErrorMessage;
-                      String? savedEmail = _profile?.email;
-
-                      if (user != null) {
-                        final newEmail = _emailController.text.trim();
-                        final newPassword = _passwordController.text;
-
-                        try {
-                          if (newEmail.isNotEmpty && newEmail != user.email) {
-                            await user.verifyBeforeUpdateEmail(newEmail);
-                            savedEmail = user.email ?? savedEmail;
-                          } else {
-                            savedEmail = user.email ?? savedEmail;
-                          }
-                          if (newPassword.isNotEmpty) {
-                            await user.updatePassword(newPassword);
-                          }
-                        } on FirebaseAuthException catch (e) {
-                          authUpdated = false;
-                          if (e.code == 'requires-recent-login') {
-                            authErrorMessage =
-                                'For security, changing email or password requires logging in again. Please log out and back in first.';
-                          } else {
-                            authErrorMessage =
-                                e.message ?? 'Failed to update credentials.';
-                          }
-                        } catch (e) {
-                          authUpdated = false;
-                          authErrorMessage = e.toString();
-                        }
-                      }
-
-                      if (!authUpdated) {
-                        throw FirebaseAuthException(
-                          code: 'profile-auth-update-failed',
-                          message: authErrorMessage,
-                        );
-                      }
-
-                      // 2. Update Firestore after Auth succeeds so profile email stays consistent.
-                      await _firestoreService.updateUserProfile(
-                        fullName: _nameController.text.trim(),
-                        phone: _phoneController.text.trim(),
-                        address: _addressController.text.trim(),
-                        email: savedEmail,
-                      );
-
-                      // Update local profile state
-                      if (mounted) {
-                        setState(() {
-                          if (_profile != null) {
-                            _profile = UserProfile(
-                              uid: _profile!.uid,
-                              fullName: _nameController.text.trim(),
-                              email: savedEmail ?? _profile!.email,
-                              phone: _phoneController.text.trim(),
-                              address: _addressController.text.trim(),
-                              profileImageBase64: _profile!.profileImageBase64,
-                              paymentMethod: _profile!.paymentMethod,
-                              createdAt: _profile!.createdAt,
-                              ordersCount: _profile!.ordersCount,
-                              points: _profile!.points,
-                            );
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Phone',
+                        hintText: 'Enter your phone number',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _addressController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Address',
+                        hintText: 'Enter your delivery address',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _showAccountSecuritySheet(parentContext);
                           }
                         });
-                      }
-
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Profile updated successfully'),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Failed to update profile: ${e.toString()}',
+                      },
+                      icon: const Icon(Icons.lock_outline),
+                      label: const Text('CHANGE EMAIL & PASSWORD'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.3,
                           ),
-                          backgroundColor: theme.colorScheme.error,
                         ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: const Text('SAVE CHANGES'),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (!validateProfileForm()) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                validationError ?? 'Please check the form',
+                              ),
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          await _firestoreService.updateUserProfile(
+                            fullName: _nameController.text.trim(),
+                            phone: _phoneController.text.trim(),
+                            address: _addressController.text.trim(),
+                          );
+
+                          if (mounted) {
+                            setState(() {
+                              if (_profile != null) {
+                                _profile = UserProfile(
+                                  uid: _profile!.uid,
+                                  fullName: _nameController.text.trim(),
+                                  email: _profile!.email,
+                                  phone: _phoneController.text.trim(),
+                                  address: _addressController.text.trim(),
+                                  profileImageBase64:
+                                      _profile!.profileImageBase64,
+                                  paymentMethod: _profile!.paymentMethod,
+                                  createdAt: _profile!.createdAt,
+                                  ordersCount: _profile!.ordersCount,
+                                  points: _profile!.points,
+                                );
+                              }
+                            });
+                          }
+
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Profile updated successfully'),
+                            ),
+                          );
+                        } on FirebaseAuthException catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e.message ?? 'Failed to update profile.',
+                              ),
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Failed to update profile: ${e.toString()}',
+                              ),
+                              backgroundColor: theme.colorScheme.error,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('SAVE CHANGES'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAccountSecuritySheet(BuildContext context) {
+    final parentContext = context;
+    final currentEmail =
+        FirebaseAuth.instance.currentUser?.email ?? _profile?.email ?? '';
+    _emailController.text = currentEmail;
+    _currentPasswordController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+
+    String? emailError;
+    String? currentPasswordError;
+    String? newPasswordError;
+    String? confirmPasswordError;
+    bool obscureCurrentPassword = true;
+    bool obscureNewPassword = true;
+    bool obscureConfirmPassword = true;
+
+    bool validateSecurityForm() {
+      emailError = null;
+      currentPasswordError = null;
+      newPasswordError = null;
+      confirmPasswordError = null;
+      final email = _emailController.text.trim();
+      final currentPassword = _currentPasswordController.text;
+      final newPassword = _passwordController.text;
+      final confirmPassword = _confirmPasswordController.text;
+      final isEmailChanging = email.isNotEmpty && email != currentEmail;
+      final isPasswordChanging = newPassword.isNotEmpty;
+
+      if (email.isEmpty) {
+        emailError = 'Email cannot be empty';
+        return false;
+      }
+      if (!RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(email)) {
+        emailError = 'Please enter a valid email address';
+        return false;
+      }
+      if (!isEmailChanging && !isPasswordChanging) {
+        newPasswordError = 'Change your email or enter a new password';
+        return false;
+      }
+      if (currentPassword.isEmpty) {
+        currentPasswordError = 'Current password is required';
+        return false;
+      }
+      if (isPasswordChanging && newPassword.length < 8) {
+        newPasswordError = 'New password must be at least 8 characters';
+        return false;
+      }
+      if (isPasswordChanging &&
+          (!RegExp(r'[A-Za-z]').hasMatch(newPassword) ||
+              !RegExp(r'\d').hasMatch(newPassword))) {
+        newPasswordError = 'Use letters and numbers';
+        return false;
+      }
+      if (isPasswordChanging && confirmPassword.isEmpty) {
+        confirmPasswordError = 'Please confirm your new password';
+        return false;
+      }
+      if (isPasswordChanging && confirmPassword != newPassword) {
+        confirmPasswordError = 'New passwords do not match';
+        return false;
+      }
+      return true;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return StatefulBuilder(
+          builder: (context, refreshSheet) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _showEditProfileSheet(parentContext);
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.arrow_back),
+                          tooltip: 'Back',
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Change Email & Password',
+                            style: GoogleFonts.notoSerif(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'Enter new email',
+                        errorText: emailError,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (_) => refreshSheet(() {
+                        emailError = null;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _currentPasswordController,
+                      obscureText: obscureCurrentPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Current Password',
+                        errorText: currentPasswordError,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureCurrentPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () => refreshSheet(() {
+                            obscureCurrentPassword = !obscureCurrentPassword;
+                          }),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (_) => refreshSheet(() {
+                        currentPasswordError = null;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: obscureNewPassword,
+                      decoration: InputDecoration(
+                        labelText: 'New Password',
+                        errorText: newPasswordError,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureNewPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () => refreshSheet(() {
+                            obscureNewPassword = !obscureNewPassword;
+                          }),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (_) => refreshSheet(() {
+                        newPasswordError = null;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm New Password',
+                        errorText: confirmPasswordError,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureConfirmPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () => refreshSheet(() {
+                            obscureConfirmPassword = !obscureConfirmPassword;
+                          }),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (_) => refreshSheet(() {
+                        confirmPasswordError = null;
+                      }),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (!validateSecurityForm()) {
+                          refreshSheet(() {});
+                          return;
+                        }
+
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null || user.email == null) {
+                            throw FirebaseAuthException(
+                              code: 'no-current-user',
+                              message: 'Please log in again.',
+                            );
+                          }
+
+                          final newEmail = _emailController.text.trim();
+                          final newPassword = _passwordController.text;
+                          final previousEmail = user.email!;
+                          final isEmailChanging = newEmail != previousEmail;
+                          final isPasswordChanging = newPassword.isNotEmpty;
+                          var statusMessage = 'Account security updated';
+
+                          final credential = EmailAuthProvider.credential(
+                            email: previousEmail,
+                            password: _currentPasswordController.text,
+                          );
+                          await user.reauthenticateWithCredential(credential);
+
+                          if (isPasswordChanging) {
+                            await user.updatePassword(newPassword);
+                          }
+                          if (isEmailChanging) {
+                            await user.verifyBeforeUpdateEmail(newEmail);
+                            statusMessage =
+                                'Password saved. Verify the email we sent to $newEmail before logging in with it.';
+                          }
+
+                          await _firestoreService.updateUserProfile(
+                            fullName: _profile?.fullName ?? '',
+                            phone: _profile?.phone ?? '',
+                            address: _profile?.address ?? '',
+                            email: previousEmail,
+                          );
+
+                          if (mounted) {
+                            setState(() {
+                              if (_profile != null) {
+                                _profile = UserProfile(
+                                  uid: _profile!.uid,
+                                  fullName: _profile!.fullName,
+                                  email: previousEmail,
+                                  phone: _profile!.phone,
+                                  address: _profile!.address,
+                                  profileImageBase64:
+                                      _profile!.profileImageBase64,
+                                  paymentMethod: _profile!.paymentMethod,
+                                  createdAt: _profile!.createdAt,
+                                  ordersCount: _profile!.ordersCount,
+                                  points: _profile!.points,
+                                );
+                              }
+                              _currentPasswordController.clear();
+                              _passwordController.clear();
+                              _confirmPasswordController.clear();
+                            });
+                          }
+
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(statusMessage)),
+                          );
+                        } on FirebaseAuthException catch (e) {
+                          if (!context.mounted) return;
+                          refreshSheet(() {
+                            switch (e.code) {
+                              case 'wrong-password':
+                              case 'invalid-credential':
+                                currentPasswordError =
+                                    'Current password is incorrect';
+                              case 'email-already-in-use':
+                                emailError =
+                                    'This email is already used by another account';
+                              case 'invalid-email':
+                                emailError = 'Please enter a valid email';
+                              case 'weak-password':
+                                newPasswordError =
+                                    'Use at least 8 characters with letters and numbers';
+                              case 'requires-recent-login':
+                                currentPasswordError =
+                                    'Please enter your current password again';
+                              case 'too-many-requests':
+                                currentPasswordError =
+                                    'Too many attempts. Try again later';
+                              case 'operation-not-allowed':
+                                emailError =
+                                    'Verify the new email before logging in with it';
+                              default:
+                                final message = e.message ?? '';
+                                if (message.toLowerCase().contains('email')) {
+                                  emailError = message;
+                                } else {
+                                  currentPasswordError = message.isEmpty
+                                      ? 'Failed to update email or password'
+                                      : message;
+                                }
+                            }
+                          });
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          refreshSheet(() {
+                            currentPasswordError =
+                                'Failed to update account. Please try again';
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('SAVE EMAIL & PASSWORD'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -527,13 +1053,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF0B57D0),
+                            Color(0xFF1434CB),
+                            Color(0xFF071D73),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: colorScheme.primary.withValues(alpha: 0.25),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
+                            color: const Color(
+                              0xFF1434CB,
+                            ).withValues(alpha: 0.28),
+                            blurRadius: 22,
+                            offset: const Offset(0, 12),
                           ),
                         ],
                       ),
@@ -546,14 +1082,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Text(
                                 'VISA',
                                 style: theme.textTheme.titleMedium?.copyWith(
-                                  color: colorScheme.onPrimary,
+                                  color: Colors.white,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 3,
                                 ),
                               ),
-                              Icon(
-                                Icons.credit_card,
-                                color: colorScheme.onPrimary,
+                              Container(
+                                width: 26,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Icon(
+                                  Icons.credit_card,
+                                  color: Color(0xFF1434CB),
+                                  size: 16,
+                                ),
                               ),
                             ],
                           ),
@@ -561,7 +1106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Text(
                             '****  ****  ****  $last4',
                             style: theme.textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onPrimary,
+                              color: Colors.white,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 2,
                             ),
@@ -575,9 +1120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   previewName,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onPrimary.withValues(
-                                      alpha: 0.75,
-                                    ),
+                                    color: Colors.white.withValues(alpha: 0.75),
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.2,
                                   ),
@@ -587,9 +1130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Text(
                                 'VALID THRU ${expiryMonth ?? 'MM'}/${expiryYear ?? 'YY'}',
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onPrimary.withValues(
-                                    alpha: 0.75,
-                                  ),
+                                  color: Colors.white.withValues(alpha: 0.75),
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -916,7 +1457,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       // Avatar
                       GestureDetector(
-                        onTap: _pickImage,
+                        onTap: _isUploading ? null : _showProfilePhotoOptions,
                         child: Container(
                           width: 128,
                           height: 128,
@@ -968,26 +1509,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Positioned(
                                 bottom: 0,
                                 right: 0,
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primary,
-                                    shape: BoxShape.circle,
-                                    boxShadow: <BoxShadow>[
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.15,
+                                child: GestureDetector(
+                                  onTap: _isUploading
+                                      ? null
+                                      : () => _pickImage(ImageSource.camera),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary,
+                                      shape: BoxShape.circle,
+                                      boxShadow: <BoxShadow>[
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
                                         ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    Icons.camera_alt,
-                                    size: 14,
-                                    color: colorScheme.onPrimary,
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.camera_alt,
+                                      size: 14,
+                                      color: colorScheme.onPrimary,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -999,7 +1545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       // Name & Email
                       Text(
-                        _profile?.fullName ?? 'User Name',
+                        _profileDisplayName,
                         style: GoogleFonts.notoSerif(
                           fontSize: 28,
                           fontWeight: FontWeight.w600,
@@ -1345,6 +1891,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icons.arrow_forward_ios,
               size: 14,
               color: colorScheme.primary.withValues(alpha: 0.35),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoAction({
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final colorScheme = theme.colorScheme;
+    final actionColor = isDestructive ? colorScheme.error : colorScheme.primary;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: actionColor.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: actionColor),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: actionColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

@@ -42,10 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -66,8 +63,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return _showSnackBar('Password cannot be empty.');
     }
 
-    if (password.length < 6) {
-      return _showSnackBar('Password must be at least 6 characters.');
+    if (password.length < 8) {
+      return _showSnackBar('Password must be at least 8 characters.');
     }
 
     setState(() {
@@ -88,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'user-disabled' => 'This user account has been disabled.',
         'user-not-found' => 'No account found with that email.',
         'wrong-password' => 'Incorrect password. Please try again.',
+        'invalid-credential' => 'Incorrect email or password.',
         'too-many-requests' => 'Too many attempts. Please try again later.',
         _ => 'Login failed. Please check your credentials and try again.',
       };
@@ -221,7 +219,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Expanded(
                           child: Divider(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.3,
+                            ),
                           ),
                         ),
                         Padding(
@@ -232,13 +232,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 2.0,
-                              color: const Color(0xFF504441).withValues(alpha: 0.6),
+                              color: const Color(
+                                0xFF504441,
+                              ).withValues(alpha: 0.6),
                             ),
                           ),
                         ),
                         Expanded(
                           child: Divider(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.3,
+                            ),
                           ),
                         ),
                       ],
@@ -479,8 +483,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     letterSpacing: 1.5,
                     color: theme.colorScheme.primary,
                     decoration: TextDecoration.underline,
-                    decorationColor: theme.colorScheme.secondary.withValues(alpha: 
-                      0.3,
+                    decorationColor: theme.colorScheme.secondary.withValues(
+                      alpha: 0.3,
                     ),
                   ),
                 ),

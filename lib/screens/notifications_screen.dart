@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mood/services/firestore_service.dart';
 
 class NotificationItem {
   final String id;
@@ -43,14 +44,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   // List of active notifications in local state
   late List<NotificationItem> _notifications;
 
+  final FirestoreService _firestoreService = FirestoreService();
+
   @override
   void initState() {
     super.initState();
     _notifications = [
       NotificationItem(
         id: '1',
-        imageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
+        imageUrl: '',
         title: 'Order #ATL-8829-0142 is being prepared with artisanal care',
         status: 'In Production',
         time: '2h ago',
@@ -79,6 +81,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         isRead: true, // Set to true to faded by default
       ),
     ];
+    _loadNotificationImages();
+  }
+
+  Future<void> _loadNotificationImages() async {
+    final url = await _firestoreService.getAppConfigUrl('notifications_order');
+    if (mounted && url != null && url.isNotEmpty) {
+      setState(() {
+        final idx = _notifications.indexWhere((n) => n.id == '1');
+        if (idx != -1) {
+          _notifications[idx] = NotificationItem(
+            id: _notifications[idx].id,
+            imageUrl: url,
+            title: _notifications[idx].title,
+            status: _notifications[idx].status,
+            time: _notifications[idx].time,
+            isRead: _notifications[idx].isRead,
+          );
+        }
+      });
+    }
   }
 
   // Toggle selection of a notification

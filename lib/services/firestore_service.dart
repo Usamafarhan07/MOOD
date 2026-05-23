@@ -4,6 +4,14 @@ import 'package:flutter/foundation.dart';
 
 import 'dart:convert';
 
+int parsePriceValue(dynamic value) {
+  if (value is num) return value.toInt();
+  return int.tryParse(
+        value?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '',
+      ) ??
+      0;
+}
+
 class CartItem {
   final String id;
   final String productId;
@@ -34,10 +42,7 @@ class CartItem {
       productId: data['productId'] as String? ?? '',
       title: data['title'] as String? ?? '',
       imageUrl: data['imageUrl'] as String? ?? '',
-      price:
-          (data['price'] as int?) ??
-          int.tryParse(data['price']?.toString() ?? '') ??
-          0,
+      price: parsePriceValue(data['price']),
       quantity: (data['quantity'] as int?) ?? 1,
       addedAt: (data['addedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       subtitle: data['subtitle'] as String?,
@@ -77,10 +82,7 @@ class WishlistItem {
       productId: data['productId'] as String? ?? '',
       title: data['title'] as String? ?? '',
       imageUrl: data['imageUrl'] as String? ?? '',
-      price:
-          (data['price'] as int?) ??
-          int.tryParse(data['price']?.toString() ?? '') ??
-          0,
+      price: parsePriceValue(data['price']),
       addedAt: (data['addedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       subtitle: data['subtitle'] as String?,
     );
@@ -142,6 +144,7 @@ class Order {
   final int totalPrice;
   final int subtotal;
   final int shippingFee;
+  final int taxFee;
   final String orderStatus;
   final DateTime createdAt;
   final String paymentMethod;
@@ -155,6 +158,7 @@ class Order {
     required this.totalPrice,
     required this.subtotal,
     required this.shippingFee,
+    required this.taxFee,
     required this.orderStatus,
     required this.createdAt,
     required this.paymentMethod,
@@ -175,6 +179,7 @@ class Order {
       totalPrice: (data['totalPrice'] as num?)?.toInt() ?? 0,
       subtotal: (data['subtotal'] as num?)?.toInt() ?? 0,
       shippingFee: (data['shippingFee'] as num?)?.toInt() ?? 0,
+      taxFee: (data['taxFee'] as num?)?.toInt() ?? 0,
       orderStatus: data['orderStatus'] as String? ?? 'pending',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       paymentMethod: data['paymentMethod'] as String? ?? '',
@@ -190,6 +195,7 @@ class Order {
       'totalPrice': totalPrice,
       'subtotal': subtotal,
       'shippingFee': shippingFee,
+      'taxFee': taxFee,
       'orderStatus': orderStatus,
       'createdAt': Timestamp.fromDate(createdAt),
       'paymentMethod': paymentMethod,
@@ -260,19 +266,13 @@ class UserProfile {
 class FirestoreService {
   static const String _usersCollection = 'users';
   static const String _productsCollection = 'products';
+  static const String _homeBannersCollection = 'home_banners';
   static const String _cartSubcollection = 'cart';
   static const String _wishlistSubcollection = 'wishlist';
   static const String _ordersCollection = 'orders';
-  static const int _cacheSize = 10 * 1024 * 1024; // 10MB
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  FirestoreService() {
-    _firestore.settings = Settings(
-      cacheSizeBytes: _cacheSize,
-      persistenceEnabled: true,
-    );
-  }
+  FirestoreService();
 
   User get _currentUser {
     final user = FirebaseAuth.instance.currentUser;
@@ -290,6 +290,17 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get products =>
       _firestore.collection(_productsCollection);
+
+  CollectionReference<Map<String, dynamic>> get homeBanners =>
+      _firestore.collection(_homeBannersCollection);
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getHomeBanners() {
+    try {
+      return homeBanners.snapshots();
+    } catch (e) {
+      throw Exception('Failed to fetch home banners: $e');
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> get _cartCollection => _firestore
       .collection(_usersCollection)
@@ -493,6 +504,9 @@ class FirestoreService {
     if (order.totalPrice <= 0) {
       throw ArgumentError('Order total must be positive');
     }
+    if (order.totalPrice != order.subtotal + order.shippingFee + order.taxFee) {
+      throw ArgumentError('Order total does not match its cost breakdown');
+    }
 
     try {
       final docRef = await _firestore
@@ -501,6 +515,34 @@ class FirestoreService {
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create order: $e');
+    }
+  }
+
+  Future<String> createOrderAndClearCart(Order order) async {
+    if (order.items.isEmpty) {
+      throw ArgumentError('Order must have at least one item');
+    }
+    if (order.totalPrice <= 0) {
+      throw ArgumentError('Order total must be positive');
+    }
+    if (order.totalPrice != order.subtotal + order.shippingFee + order.taxFee) {
+      throw ArgumentError('Order total does not match its cost breakdown');
+    }
+
+    try {
+      final orderRef = _firestore.collection(_ordersCollection).doc();
+      final cartDocs = await _cartCollection.get();
+      final batch = _firestore.batch();
+
+      batch.set(orderRef, order.toMap());
+      for (final doc in cartDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      return orderRef.id;
+    } catch (e) {
+      throw Exception('Failed to create order and clear cart: $e');
     }
   }
 
@@ -646,6 +688,17 @@ class FirestoreService {
       return base64String;
     } catch (e) {
       throw Exception('Failed to upload profile image as Base64: $e');
+    }
+  }
+
+  Future<void> removeProfileImage() async {
+    try {
+      await usersCollection.doc(_currentUser.uid).set({
+        'profileImageBase64': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to remove profile image: $e');
     }
   }
 
@@ -981,6 +1034,86 @@ class FirestoreService {
           'shippingDetails': ['Free standard delivery on all orders.'],
           'sustainability': ['Made with ethically sourced silk fibers.'],
         },
+        {
+          'id': 'beauty-signature-eau-de-parfum',
+          'title': 'Signature Eau de Parfum',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 18,900',
+          'subtitle': 'Fragrance - Warm Woods',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A refined eau de parfum with warm woods, soft florals, and a polished evening trail.',
+          'sizes': ['50ML', '100ML'],
+          'composition': ['Bergamot', 'White florals', 'Amber woods'],
+          'careInstructions': [
+            'Store away from direct sunlight',
+            'Keep cap closed after use',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Packaged in recyclable glass.'],
+        },
+        {
+          'id': 'beauty-amber-glass-perfume',
+          'title': 'Amber Glass Perfume',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 16,500',
+          'subtitle': 'Fragrance - Amber Vanilla',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A luminous amber fragrance with vanilla, cedar, and an elegant skin-like finish.',
+          'sizes': ['50ML', '100ML'],
+          'composition': ['Amber', 'Vanilla', 'Cedarwood'],
+          'careInstructions': [
+            'Store in a cool dry place',
+            'Avoid spraying near eyes',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Made with responsibly sourced fragrance oils.'],
+        },
+        {
+          'id': 'beauty-luxury-skincare-set',
+          'title': 'Luxury Skincare Set',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 21,900',
+          'subtitle': 'Beauty - Hydrating Ritual',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A curated skincare ritual with hydrating essentials for a clean, luminous finish.',
+          'sizes': ['Set'],
+          'composition': ['Cleanser', 'Serum', 'Moisturizer'],
+          'careInstructions': [
+            'Use morning and evening',
+            'Patch test before first use',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Cruelty-free formula in recyclable packaging.'],
+        },
+        {
+          'id': 'beauty-satin-lip-colour',
+          'title': 'Satin Lip Colour',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 5,900',
+          'subtitle': 'Beauty - Satin Finish',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A satin lip colour with rich pigment, smooth comfort, and a luxury soft-focus sheen.',
+          'sizes': ['One Size'],
+          'composition': ['Satin pigment', 'Nourishing oils', 'Soft waxes'],
+          'careInstructions': [
+            'Close cap tightly after use',
+            'Store away from direct heat',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Cruelty-free formula.'],
+        },
       ];
 
       for (final p in premiumProducts) {
@@ -992,5 +1125,198 @@ class FirestoreService {
     } catch (e) {
       debugPrint('Error seeding premium products: $e');
     }
+  }
+
+  Future<void> seedPerfumeBeautyProducts() async {
+    try {
+      final batch = _firestore.batch();
+      final perfumeProducts = [
+        {
+          'id': 'beauty-signature-eau-de-parfum',
+          'title': 'Signature Eau de Parfum',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 18,900',
+          'subtitle': 'Fragrance - Warm Woods',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A refined eau de parfum with warm woods, soft florals, and a polished evening trail.',
+          'sizes': ['50ML', '100ML'],
+          'composition': ['Bergamot', 'White florals', 'Amber woods'],
+          'careInstructions': [
+            'Store away from direct sunlight',
+            'Keep cap closed after use',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Packaged in recyclable glass.'],
+        },
+        {
+          'id': 'beauty-amber-glass-perfume',
+          'title': 'Amber Glass Perfume',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 16,500',
+          'subtitle': 'Fragrance - Amber Vanilla',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A luminous amber fragrance with vanilla, cedar, and an elegant skin-like finish.',
+          'sizes': ['50ML', '100ML'],
+          'composition': ['Amber', 'Vanilla', 'Cedarwood'],
+          'careInstructions': [
+            'Store in a cool dry place',
+            'Avoid spraying near eyes',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Made with responsibly sourced fragrance oils.'],
+        },
+        {
+          'id': 'beauty-luxury-skincare-set',
+          'title': 'Luxury Skincare Set',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 21,900',
+          'subtitle': 'Beauty - Hydrating Ritual',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A curated skincare ritual with hydrating essentials for a clean, luminous finish.',
+          'sizes': ['Set'],
+          'composition': ['Cleanser', 'Serum', 'Moisturizer'],
+          'careInstructions': [
+            'Use morning and evening',
+            'Patch test before first use',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Cruelty-free formula in recyclable packaging.'],
+        },
+        {
+          'id': 'beauty-satin-lip-colour',
+          'title': 'Satin Lip Colour',
+          'category': 'Perfume / Beauty',
+          'label': 'Perfume / Beauty',
+          'price': 'LKR 5,900',
+          'subtitle': 'Beauty - Satin Finish',
+          'imageUrl':
+              'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=600&h=800&q=80',
+          'description':
+              'A satin lip colour with rich pigment, smooth comfort, and a luxury soft-focus sheen.',
+          'sizes': ['One Size'],
+          'composition': ['Satin pigment', 'Nourishing oils', 'Soft waxes'],
+          'careInstructions': [
+            'Close cap tightly after use',
+            'Store away from direct heat',
+          ],
+          'shippingDetails': ['Free standard delivery on all orders.'],
+          'sustainability': ['Cruelty-free formula.'],
+        },
+      ];
+
+      for (final product in perfumeProducts) {
+        batch.set(
+          products.doc(product['id'] as String),
+          product,
+          SetOptions(merge: true),
+        );
+      }
+      await batch.commit();
+      debugPrint('Seeded perfume and beauty products successfully!');
+      await seedAppConfigs();
+    } catch (e) {
+      debugPrint('Error seeding perfume and beauty products: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> seedHomeBanners() async {
+    try {
+      final batch = _firestore.batch();
+      final banners = [
+        {
+          'id': 'banner1',
+          'title': 'The Resort Edit',
+          'subtitle': 'Tailored ease, polished textures, and pieces selected for the modern wardrobe.',
+          'imageUrl': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=90',
+          'isActive': true,
+          'order': 1,
+        },
+        {
+          'id': 'banner2',
+          'title': 'Evening Atelier',
+          'subtitle': 'Dark tailoring, satin accents, and refined pieces with quiet confidence.',
+          'imageUrl': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=90',
+          'isActive': true,
+          'order': 2,
+        },
+        {
+          'id': 'banner3',
+          'title': 'Beauty Objects',
+          'subtitle': 'Fragrance, soft glow, and finishing details for a complete MOOD ritual.',
+          'imageUrl': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1200&q=90',
+          'isActive': true,
+          'order': 3,
+        },
+      ];
+
+      for (final banner in banners) {
+        batch.set(
+          homeBanners.doc(banner['id'] as String),
+          banner,
+          SetOptions(merge: true),
+        );
+      }
+      await batch.commit();
+      debugPrint('Seeded home banners successfully!');
+    } catch (e) {
+      debugPrint('Error seeding home banners: $e');
+    }
+  }
+
+  Future<void> seedAppConfigs() async {
+    try {
+      await seedHomeBanners();
+      final batch = _firestore.batch();
+      final configs = {
+        'cover_page': {
+          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
+        },
+        'featured_series': {
+          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
+        },
+        'notifications_order': {
+          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
+        },
+        'look_trousers': {
+          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
+        },
+        'look_silk': {
+          'imageUrl': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
+        },
+      };
+
+      configs.forEach((key, val) {
+        batch.set(
+          _firestore.collection('config').doc(key),
+          val,
+          SetOptions(merge: true),
+        );
+      });
+
+      await batch.commit();
+      debugPrint('Seeded app configurations successfully!');
+    } catch (e) {
+      debugPrint('Error seeding app configs: $e');
+    }
+  }
+
+  Future<String?> getAppConfigUrl(String key) async {
+    try {
+      final doc = await _firestore.collection('config').doc(key).get();
+      if (doc.exists) {
+        return doc.data()?['imageUrl'] as String?;
+      }
+    } catch (_) {}
+    return null;
   }
 }

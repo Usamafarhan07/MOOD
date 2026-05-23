@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  
   const RegistrationScreen({super.key});
-  
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -15,6 +13,7 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _agreeTerms = false;
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -35,6 +34,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         });
       }
     });
+    _confirmPasswordController.addListener(() {
+      if (_confirmPasswordController.text.isEmpty && !_obscureConfirmPassword) {
+        setState(() => _obscureConfirmPassword = true);
+      }
+    });
   }
 
   @override
@@ -50,10 +54,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -67,11 +68,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return _showSnackBar('Full name cannot be empty.');
     }
 
+    if (fullName.length < 2) {
+      return _showSnackBar('Full name must be at least 2 characters.');
+    }
+
     if (email.isEmpty) {
       return _showSnackBar('Email cannot be empty.');
     }
 
-    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,}");
+    final emailRegex = RegExp(r"^[\w\-.]+@([\w-]+\.)+[\w-]{2,}$");
     if (!emailRegex.hasMatch(email)) {
       return _showSnackBar('Please enter a valid email address.');
     }
@@ -80,8 +85,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return _showSnackBar('Password cannot be empty.');
     }
 
-    if (password.length < 6) {
-      return _showSnackBar('Password must be at least 6 characters.');
+    if (password.length < 8) {
+      return _showSnackBar('Password must be at least 8 characters.');
+    }
+
+    if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
+        !RegExp(r'\d').hasMatch(password)) {
+      return _showSnackBar('Password must include letters and numbers.');
+    }
+
+    if (confirmPassword.isEmpty) {
+      return _showSnackBar('Please confirm your password.');
     }
 
     if (confirmPassword != password) {
@@ -96,8 +110,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _isLoading = true;
     });
 
+    UserCredential? credential;
     try {
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -118,13 +133,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final message = switch (error.code) {
         'email-already-in-use' => 'This email is already registered.',
         'invalid-email' => 'That email address is invalid.',
-        'operation-not-allowed' => 'Email/password registration is not enabled.',
-        'weak-password' => 'Password is too weak. Use at least 6 characters.',
+        'operation-not-allowed' =>
+          'Email/password registration is not enabled.',
+        'weak-password' =>
+          'Password is too weak. Use at least 8 characters with letters and numbers.',
         'too-many-requests' => 'Too many requests. Please try again later.',
         _ => 'Registration failed. Please try again.',
       };
       await _showSnackBar(message);
     } catch (_) {
+      try {
+        await credential?.user?.delete();
+      } catch (_) {}
       await _showSnackBar('Registration failed. Please try again later.');
     } finally {
       if (mounted) {
@@ -148,7 +168,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 48.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 48.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -251,7 +274,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: _agreeTerms
-                                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                  ? const Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: Colors.white,
+                                    )
                                   : null,
                             ),
                           ),
@@ -266,7 +293,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               child: RichText(
                                 text: TextSpan(
                                   style: textTheme.bodySmall?.copyWith(
-                                    color: const Color(0xFF504441).withValues(alpha: 0.7),
+                                    color: const Color(
+                                      0xFF504441,
+                                    ).withValues(alpha: 0.7),
                                     height: 1.5,
                                   ),
                                   children: [
@@ -277,7 +306,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
+                                        decorationColor: const Color(
+                                          0xFFD4C3BE,
+                                        ).withValues(alpha: 0.3),
                                       ),
                                     ),
                                     const TextSpan(text: ' and '),
@@ -287,7 +318,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         color: colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: const Color(0xFFD4C3BE).withValues(alpha: 0.3),
+                                        decorationColor: const Color(
+                                          0xFFD4C3BE,
+                                        ).withValues(alpha: 0.3),
                                       ),
                                     ),
                                   ],
@@ -343,7 +376,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF504441).withValues(alpha: 0.6),
+                            color: const Color(
+                              0xFF504441,
+                            ).withValues(alpha: 0.6),
                             letterSpacing: 0.5,
                           ),
                           children: [
@@ -354,7 +389,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
-                                decorationColor: colorScheme.primary.withValues(alpha: 0.2),
+                                decorationColor: colorScheme.primary.withValues(
+                                  alpha: 0.2,
+                                ),
                               ),
                             ),
                           ],
@@ -412,6 +449,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
   }) {
+    final isConfirmPasswordField = controller == _confirmPasswordController;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -430,7 +468,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          obscureText: obscureText,
+          obscureText: isConfirmPasswordField
+              ? _obscureConfirmPassword
+              : obscureText,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.primary,
           ),
@@ -449,6 +489,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               horizontal: 20,
               vertical: 16,
             ),
+            suffixIcon:
+                isConfirmPasswordField &&
+                    _confirmPasswordController.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: const Color(0xFF504441).withValues(alpha: 0.4),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  )
+                : null,
           ),
         ),
       ],
