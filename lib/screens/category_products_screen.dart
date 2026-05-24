@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class CategoryProductsScreen extends StatelessWidget {
   final String categoryName;
@@ -38,11 +39,15 @@ class CategoryProductsScreen extends StatelessWidget {
           stream: firestoreService.getProducts(category: categoryName),
           builder: (context, snapshot) {
             final products = snapshot.data?.docs
-                    .map((doc) => {'id': doc.id, ...doc.data()})
-                    .where((product) {
-                  final imageUrl = product['imageUrl']?.toString() ?? '';
-                  return imageUrl.startsWith('http');
-                }).toList() ??
+                    .map((doc) {
+                      final product = {'id': doc.id, ...doc.data()};
+                      product['imageUrl'] = firstFirestoreImageUrl(
+                        product,
+                        sourcePath: 'products/${doc.id}',
+                      );
+                      return product;
+                    })
+                    .toList() ??
                 <Map<String, dynamic>>[];
 
             return CustomScrollView(
@@ -137,8 +142,8 @@ class _ProductTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final title = product['title']?.toString() ?? 'MOOD Piece';
-    final price = product['price']?.toString() ?? 'LKR 0';
+    final title = product['title']?.toString() ?? '';
+    final price = product['price']?.toString() ?? '';
     final imageUrl = product['imageUrl']?.toString() ?? '';
     final isFavorite = product['isFavorite'] == true;
 
@@ -167,36 +172,10 @@ class _ProductTile extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
-                      imageUrl,
+                    FirestoreImage(
+                      imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-
-                        return Container(
-                          color: colorScheme.surfaceContainerLow,
-                          child: Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: colorScheme.surfaceContainerLow,
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: colorScheme.primary.withValues(alpha: 0.38),
-                            size: 30,
-                          ),
-                        );
-                      },
+                      backgroundColor: colorScheme.surfaceContainerLow,
                     ),
                     Positioned(
                       top: 10,

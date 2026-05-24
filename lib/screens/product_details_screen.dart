@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/foundation.dart';
@@ -219,10 +220,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     final Map<String, dynamic> productData =
         _currentProductData ?? widget.productData ?? <String, dynamic>{};
-    final title = productData['title']?.toString() ?? 'MOOD Piece';
-    final price = productData['price']?.toString() ?? 'LKR 0';
-    final label = productData['label']?.toString() ?? 'Collection';
-    final imageUrl = productData['imageUrl']?.toString() ?? '';
+    final title = productData['title']?.toString() ?? '';
+    final price = productData['price']?.toString() ?? '';
+    final label = productData['label']?.toString() ?? '';
+    final imageUrl = firstFirestoreImageUrl(
+      productData,
+      sourcePath: 'product_details/${productData['id'] ?? widget.productId ?? 'extra'}',
+    );
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -286,16 +290,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (imageUrl.startsWith('http'))
-                        Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(color: const Color(0xFF1E1A18));
-                          },
-                        )
-                      else
-                        Container(
+                      FirestoreImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        backgroundColor: const Color(0xFF1E1A18),
+                        fallback: Container(
                           color: const Color(0xFF1E1A18),
                           child: const Center(
                             child: Icon(
@@ -305,6 +304,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ),
                           ),
                         ),
+                      ),
 
                       // Floating Product Header Overlay
                       Positioned(
@@ -961,8 +961,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
                 .where((product) {
                   final id = product['id']?.toString() ?? '';
+                  product['imageUrl'] = firstFirestoreImageUrl(
+                    product,
+                    sourcePath: 'related_products/${product['id'] ?? 'unknown'}',
+                  );
                   final imageUrl = product['imageUrl']?.toString() ?? '';
-                  return id != currentId && imageUrl.startsWith('http');
+                  return id != currentId && imageUrl.isNotEmpty;
                 })
                 .take(2)
                 .toList() ??
@@ -993,9 +997,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }) {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final title = product['title']?.toString() ?? 'MOOD Piece';
-    final price = product['price']?.toString() ?? 'LKR 0';
-    final imageUrl = product['imageUrl']?.toString() ?? '';
+    final title = product['title']?.toString() ?? '';
+    final price = product['price']?.toString() ?? '';
+    final imageUrl = firstFirestoreImageUrl(
+      product,
+      sourcePath: 'related_product_card/${product['id'] ?? 'unknown'}',
+    );
 
     return InkWell(
       onTap: () => context.push('/product_details', extra: product),
@@ -1006,16 +1013,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.network(
-                imageUrl,
+              FirestoreImage(
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: colorScheme.surfaceContainerLow,
-                  child: Icon(
-                    Icons.image_not_supported_outlined,
-                    color: colorScheme.primary.withValues(alpha: 0.38),
-                  ),
-                ),
+                backgroundColor: colorScheme.surfaceContainerLow,
               ),
               Container(
                 decoration: BoxDecoration(
@@ -1289,17 +1290,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: imageUrl.startsWith('http')
-                              ? Image.network(
-                                  imageUrl,
-                                  width: 60,
-                                  height: 60,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _shareImageFallback(colorScheme);
-                                  },
-                                )
-                              : _shareImageFallback(colorScheme),
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: FirestoreImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              backgroundColor:
+                                  colorScheme.surfaceContainerLow,
+                              fallback: _shareImageFallback(colorScheme),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(

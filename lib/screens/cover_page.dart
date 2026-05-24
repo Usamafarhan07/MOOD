@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class CoverPage extends StatelessWidget {
   const CoverPage({super.key});
@@ -18,8 +20,8 @@ class CoverPage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Background Image
-          FutureBuilder<String?>(
-            future: FirestoreService().getAppConfigUrl('cover_page'),
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: FirestoreService().getAppConfigStream('cover_page'),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Container(
@@ -31,20 +33,19 @@ class CoverPage extends StatelessWidget {
                   ),
                 );
               }
-              final imageUrl = snapshot.data;
-              if (imageUrl == null || imageUrl.isEmpty) {
+              final imageUrl = firstFirestoreImageUrl(
+                snapshot.data?.data() ?? <String, dynamic>{},
+                sourcePath: 'config/cover_page',
+              );
+              if (imageUrl.isEmpty) {
                 return Container(
                   color: const Color(0xFF1E1A18),
                 );
               }
-              return Image.network(
-                imageUrl,
+              return FirestoreImage(
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: const Color(0xFF1E1A18),
-                  );
-                },
+                backgroundColor: const Color(0xFF1E1A18),
               );
             },
           ),

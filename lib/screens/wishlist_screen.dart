@@ -254,7 +254,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     required ThemeData theme,
     required VoidCallback onRemove,
   }) {
-    final label = item.subtitle?.split('•').first.trim() ?? 'Collection';
+    final label = item.subtitle?.split('•').first.trim() ?? '';
     return InkWell(
       onTap: () {
         context.push('/product_details', extra: {

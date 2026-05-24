@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 import 'dart:convert';
 
@@ -443,6 +444,16 @@ class FirestoreService {
     }
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getAppConfigStream(
+    String key,
+  ) {
+    try {
+      return _firestore.collection('config').doc(key).snapshots();
+    } catch (e) {
+      throw Exception('Failed to fetch app config: $e');
+    }
+  }
+
   Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream() {
     try {
       return _notificationsCollection
@@ -869,88 +880,12 @@ class FirestoreService {
     try {
       final doc = await _firestore.collection('config').doc(key).get();
       if (doc.exists) {
-        return doc.data()?['imageUrl'] as String?;
+        return firstFirestoreImageUrl(
+          doc.data() ?? <String, dynamic>{},
+          sourcePath: 'config/$key',
+        );
       }
     } catch (_) {}
     return null;
-  }
-
-  /// Seeds home banners ONLY if the collection is empty.
-  /// This preserves any manual changes made in Firestore console.
-  Future<void> seedHomeBanners() async {
-    try {
-      final existing = await homeBanners.limit(1).get();
-      if (existing.docs.isNotEmpty) return; // Already has data, skip
-
-      final batch = _firestore.batch();
-      final banners = [
-        {
-          'id': 'banner1',
-          'title': 'The Resort Edit',
-          'subtitle': 'Tailored ease, polished textures, and pieces selected for the modern wardrobe.',
-          'imageUrl': 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=90',
-          'isActive': true,
-          'order': 1,
-        },
-        {
-          'id': 'banner2',
-          'title': 'Evening Atelier',
-          'subtitle': 'Dark tailoring, satin accents, and refined pieces with quiet confidence.',
-          'imageUrl': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=90',
-          'isActive': true,
-          'order': 2,
-        },
-        {
-          'id': 'banner3',
-          'title': 'Beauty Objects',
-          'subtitle': 'Fragrance, soft glow, and finishing details for a complete MOOD ritual.',
-          'imageUrl': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=1200&q=90',
-          'isActive': true,
-          'order': 3,
-        },
-      ];
-
-      for (final banner in banners) {
-        batch.set(homeBanners.doc(banner['id'] as String), banner);
-      }
-      await batch.commit();
-      debugPrint('Seeded home banners (first run).');
-    } catch (e) {
-      debugPrint('Error seeding home banners: $e');
-    }
-  }
-
-  /// Seeds app config images ONLY if they don't already exist.
-  Future<void> seedAppConfigs() async {
-    try {
-      final configs = {
-        'cover_page': 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSUm2Hob01-g_tKLPiTrydXSO7rX2c0FsCN9VsSHZ047yrWt269tz-nN1CtyhBmKtExK6U5F8JEqh672EAnOjsQtx6gMohfsCUmukjJeVQsHxHQvv8_3zgcUXQijzp9BrR6oRsR2r41Vpc6CS1cp8WH-WVxbb7RSEIEfTmBkMMYxtyH2bmAvlGSC04uq7iDWIEwuvpe_fQLGUihWNPK3g8ZhogSXUZOvH0BVTsFU74mXok6Yn5o6Wg8QPubkK5qH4kV9XtFg3Qw80',
-        'featured_series': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDmARXl_xj3ePXQapUG07ZDS75Y4eJoXZlQ3IS3bCLzBpgSTLMwUdhLPAzBvJv6_OPgl_PpPmYR78WPuk33Bx8wSzFanfsc6kE3zgkrQqy-WriyN4pBsVMEuyybk6lT4iTakt6bWMYY_Usn6uGN8ukopQTIK6rd-BswB-8qKnUJleUWKk-_lEm6NR0zg-1j-7C44pULX3msduzlOZBu7rjI_5GPvskCFAXC3eP4Wk_-DUOtLK4CdjWTJKV-cuCat2pJUgc0PigIVYY',
-        'notifications_order': 'https://lh3.googleusercontent.com/aida-public/AB6AXuAIn5WZW2ZDB4zjyxPNbGauGMQV6b6n02Qq9FcFCDNzo1Scyan92LXmaEin6R9HRVc4pxfy0RQNtnNRKFCP1V5AnWLBloZe7XXj2JLStM4N873D6Kh4nEG_vmuBstdQWQ_4XguzhcStP47IyZxlqsdTud45WPWsW0m-RQRIioOL457ip_xSRRrUHhVj4F1garOElFHdmRW_h7Kl7M7xOTzHra-nIWs3Z2QN2oPxebOXRLE5Du1iiUkzMvSIVKKxRsygM-3ErwqV8zE',
-        'look_trousers': 'https://lh3.googleusercontent.com/aida-public/AB6AXuCW6NAFE9Gwty6Xcs4XZyOa4mIeb_jNiN__C94O1OjjjbJATRlpiV5SFL80Jf4aCQMpmI-GJyKwPEeeWLzEEkUQF3V1ajISaydZ_SskVyJocbaQ24klUXlwL-ED0piMrMX9GwbF0kgmRjkNorp9dQFtEPNMWO1x1xF52_xh3qbfsEBQamzSnFbCgSCkdf56ZukXh3wyWi4oI5ifk5HrTFcjxJVdSZXlu8dFriUE7NPoCtjPth2XjP9_EtNG4QIzy4mpkEmRpOMhwCM',
-        'look_silk': 'https://lh3.googleusercontent.com/aida-public/AB6AXuDalJJRcFLKp8me8gCX4iZwv9MZbOr8c8djfIs7ucQtqRtzkWp7u2QIFuq2vmnw6qPkZfsUYPloKl3caYqisyw__lXUNmS41iD1NcoS8zHPcr4AIXpxUjE6dC5FrTZbGHrgSUX9plEgJejQxR1QZ1uxjxmZRTzxgaw5hDWv6tiMBsGwxB1P9WpKvJpoi4xP_AfE9Akq42xRlbqu1PRV6mC3RaVQR9VbMtipWNQ7KmFphHGG_SAA2kRsEoUE8KI3GeepBGFugirO42A',
-      };
-
-      final batch = _firestore.batch();
-      bool needsWrite = false;
-
-      for (final entry in configs.entries) {
-        final doc = await _firestore.collection('config').doc(entry.key).get();
-        if (!doc.exists) {
-          batch.set(
-            _firestore.collection('config').doc(entry.key),
-            {'imageUrl': entry.value},
-          );
-          needsWrite = true;
-        }
-      }
-
-      if (needsWrite) {
-        await batch.commit();
-        debugPrint('Seeded missing app configs.');
-      }
-    } catch (e) {
-      debugPrint('Error seeding app configs: $e');
-    }
   }
 }

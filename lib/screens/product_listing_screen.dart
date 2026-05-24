@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class ProductListingScreen extends StatefulWidget {
   const ProductListingScreen({super.key});
@@ -195,7 +196,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
 
                   final products = snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    return {'id': doc.id, ...data};
+                    final product = {'id': doc.id, ...data};
+                    product['imageUrl'] = firstFirestoreImageUrl(
+                      product,
+                      sourcePath: 'products/${doc.id}',
+                    );
+                    return product;
                   }).toList();
 
                   final itemWidth =
@@ -204,7 +210,8 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                     final matchesFilter =
                         _selectedFilter == 'All Items' ||
                         product['label'] == _selectedFilter;
-                    final matchesSearch = product['title']!
+                    final title = product['title']?.toString() ?? '';
+                    final matchesSearch = title
                         .toLowerCase()
                         .contains(_searchQuery.toLowerCase());
                     return matchesFilter && matchesSearch;
@@ -235,9 +242,9 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                         width: itemWidth,
                         child: _buildProductCard(
                           imageUrl: product['imageUrl']!,
-                          label: product['label']!,
-                          title: product['title']!,
-                          price: product['price']!,
+                          label: product['label']?.toString() ?? '',
+                          title: product['title']?.toString() ?? '',
+                          price: product['price']?.toString() ?? '',
                           productId: product['id']!.toString(),
                           isFavorite: false,
                           theme: theme,
@@ -262,8 +269,10 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      FutureBuilder<String?>(
-                        future: _firestoreService.getAppConfigUrl('featured_series'),
+                      StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                        stream: _firestoreService.getAppConfigStream(
+                          'featured_series',
+                        ),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return Container(
@@ -275,20 +284,19 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                               ),
                             );
                           }
-                          final imageUrl = snapshot.data;
-                          if (imageUrl == null || imageUrl.isEmpty) {
+                          final imageUrl = firstFirestoreImageUrl(
+                            snapshot.data?.data() ?? <String, dynamic>{},
+                            sourcePath: 'config/featured_series',
+                          );
+                          if (imageUrl.isEmpty) {
                             return Container(
                               color: const Color(0xFF1E1A18),
                             );
                           }
-                          return Image.network(
-                            imageUrl,
+                          return FirestoreImage(
+                            imageUrl: imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: const Color(0xFF1E1A18),
-                              );
-                            },
+                            backgroundColor: const Color(0xFF1E1A18),
                           );
                         },
                       ),
@@ -500,7 +508,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(imageUrl, fit: BoxFit.cover),
+                  child: FirestoreImage(imageUrl: imageUrl, fit: BoxFit.cover),
                 ),
                 Positioned(
                   top: 12,

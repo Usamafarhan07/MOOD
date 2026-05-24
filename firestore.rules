@@ -20,39 +20,38 @@ service cloud.firestore {
       return !request.resource.data.keys().hasAny(['uid']) || request.resource.data.uid == uid;
     }
 
+    function hasImageField() {
+      return request.resource.data.keys().hasAny(['imageUrl', 'imageurl', 'image_url']);
+    }
+
+    function hasValidImageField() {
+      return (!request.resource.data.keys().hasAny(['imageUrl']) || request.resource.data.imageUrl is string)
+             && (!request.resource.data.keys().hasAny(['imageurl']) || request.resource.data.imageurl is string)
+             && (!request.resource.data.keys().hasAny(['image_url']) || request.resource.data.image_url is string);
+    }
+
     // Products collection - public read, admin write only
     match /products/{productId} {
       allow read: if true; // Public read access
-      allow create, update: if hasAdminClaim()
-                   && request.resource.data.keys().hasAll(['title', 'imageUrl', 'price'])
-                   && request.resource.data.title is string
-                   && request.resource.data.imageUrl is string
-                   && (request.resource.data.price is int || request.resource.data.price is float || request.resource.data.price is string);
-      allow delete: if hasAdminClaim();
+      // Product data is edited from Firebase Console only.
+      // This blocks old app builds/seeding code from restoring old imageUrl values.
+      allow create, update, delete: if false;
     }
 
     // Home poster/banner images - public read, admin write only
     match /home_banners/{bannerId} {
       allow read: if true;
-      allow create, update: if hasAdminClaim()
-                   && request.resource.data.keys().hasAll(['title', 'imageUrl'])
-                   && request.resource.data.title is string
-                   && request.resource.data.imageUrl is string
-                   && (!request.resource.data.keys().hasAny(['subtitle']) || request.resource.data.subtitle is string)
-                   && (!request.resource.data.keys().hasAny(['order']) || request.resource.data.order is int)
-                   && (!request.resource.data.keys().hasAny(['isActive']) || request.resource.data.isActive is bool);
-      allow delete: if hasAdminClaim();
+      // Banner data is edited from Firebase Console only.
+      // This blocks old app builds/seeding code from restoring old imageUrl values.
+      allow create, update, delete: if false;
     }
 
     // App-managed image/config documents - public read, admin write only
     match /config/{configId} {
       allow read: if true;
-      allow create, update: if hasAdminClaim()
-                   && request.resource.data.keys().hasAll(['imageUrl'])
-                   && request.resource.data.imageUrl is string
-                   && (!request.resource.data.keys().hasAny(['title']) || request.resource.data.title is string)
-                   && (!request.resource.data.keys().hasAny(['subtitle']) || request.resource.data.subtitle is string);
-      allow delete: if hasAdminClaim();
+      // Config images are edited from Firebase Console only.
+      // This blocks old app builds/seeding code from restoring old imageUrl values.
+      allow create, update, delete: if false;
     }
 
     // Users collection - user owns their data

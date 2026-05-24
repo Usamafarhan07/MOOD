@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'package:mood/services/firestore_service.dart';
 import 'package:mood/widgets/custom_drawer.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,11 +19,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   final FirestoreService _firestoreService = FirestoreService();
   String _selectedCategory = 'All Items';
-  late Future<List<Map<String, dynamic>>> _productsFuture;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _productsStream;
 
   late final PageController _pageController;
   int _activePage = 0;
   Timer? _autoSlideTimer;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _bannerSubscription;
 
   late List<Map<String, String>> _bannerItems;
 
@@ -29,105 +32,77 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _bannerItems = [];
-    _productsFuture = _loadProducts(_selectedCategory);
+    _productsStream = _firestoreService.getProducts(category: _selectedCategory);
     _pageController = PageController(initialPage: 0);
-    _loadHomeBanners();
+    _listenToHomeBanners();
     _startAutoSlide();
   }
 
-  Future<void> _loadHomeBanners() async {
-    try {
-      await _firestoreService.seedHomeBanners();
-      await _firestoreService.seedAppConfigs();
-      final snapshot = await _firestoreService
-          .getHomeBanners()
-          .first
-          .timeout(const Duration(seconds: 8));
+  void _listenToHomeBanners() {
+    _bannerSubscription?.cancel();
+    _bannerSubscription = _firestoreService.getHomeBanners().listen(
+      (snapshot) {
+        final docs = snapshot.docs.toList()
+          ..sort((a, b) {
+            final aOrder = (a.data()['order'] as num?)?.toInt() ?? 999;
+            final bOrder = (b.data()['order'] as num?)?.toInt() ?? 999;
+            return aOrder.compareTo(bOrder);
+          });
 
-      final docs = snapshot.docs.toList()
-        ..sort((a, b) {
-          final aOrder = (a.data()['order'] as num?)?.toInt() ?? 999;
-          final bOrder = (b.data()['order'] as num?)?.toInt() ?? 999;
-          return aOrder.compareTo(bOrder);
+        final banners = docs
+            .map((doc) {
+              final data = doc.data();
+              final isActive = data['isActive'];
+              final imageUrl = firstFirestoreImageUrl(
+                data,
+                sourcePath: 'home_banners/${doc.id}',
+              );
+              final title = data['title']?.toString().trim() ?? '';
+              final subtitle = data['subtitle']?.toString().trim() ?? '';
+              if (isActive == false || imageUrl.isEmpty) {
+                return null;
+              }
+
+              return <String, String>{
+                'title': title,
+                'subtitle': subtitle,
+                'imageUrl': imageUrl,
+              };
+            })
+            .whereType<Map<String, String>>()
+            .toList();
+
+        if (!mounted) return;
+
+        setState(() {
+          _bannerItems = banners;
+          if (_activePage >= banners.length) {
+            _activePage = 0;
+          }
         });
-
-      final banners = docs
-          .map((doc) {
-            final data = doc.data();
-            final isActive = data['isActive'];
-            final imageUrl = data['imageUrl']?.toString().trim() ?? '';
-            final title = data['title']?.toString().trim() ?? '';
-            final subtitle = data['subtitle']?.toString().trim() ?? '';
-            if (isActive == false || !imageUrl.startsWith('http')) {
-              return null;
-            }
-
-            return <String, String>{
-              'title': title.isNotEmpty ? title : 'MOOD Edit',
-              'subtitle': subtitle.isNotEmpty
-                  ? subtitle
-                  : 'A curated selection for the modern wardrobe.',
-              'imageUrl': imageUrl,
-            };
-          })
-          .whereType<Map<String, String>>()
-          .toList();
-
-      if (!mounted || banners.isEmpty) return;
-
-      setState(() {
-        _bannerItems = banners;
-        _activePage = 0;
-      });
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(0);
-      }
-    } catch (_) {
-      // Keep fallback posters when Firestore banners are unavailable.
-    }
+      },
+      onError: (_) {},
+    );
   }
 
   void _selectCategory(String category) {
     if (_selectedCategory == category) return;
     setState(() {
       _selectedCategory = category;
-      _productsFuture = _loadProducts(category);
+      _productsStream = _firestoreService.getProducts(category: category);
     });
   }
 
-  Future<List<Map<String, dynamic>>> _loadProducts(String category) async {
-    try {
-      final snapshot = await _firestoreService
-          .getProducts(category: category)
-          .first
-          .timeout(const Duration(seconds: 8));
-      final remoteProducts = snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            return _withUsableProductImage({'id': doc.id, ...data});
-          })
-          .where(_hasProductImage)
-          .toList();
-
-      final matchingRemote = remoteProducts
-          .where((product) => _productMatchesCategory(product, category))
-          .toList();
-
-      return matchingRemote;
-    } catch (_) {
-      // Firestore is the source of truth for products.
-    }
-
-    return <Map<String, dynamic>>[];
-  }
-
   Map<String, dynamic> _withUsableProductImage(Map<String, dynamic> product) {
-    return product;
-  }
-
-  bool _hasProductImage(Map<String, dynamic> product) {
-    final imageUrl = product['imageUrl']?.toString().trim() ?? '';
-    return imageUrl.startsWith('http');
+    final normalized = Map<String, dynamic>.from(product);
+    final imageUrl = firstFirestoreImageUrl(
+      normalized,
+      sourcePath: 'products/${normalized['id'] ?? 'unknown'}',
+    );
+    if (imageUrl.isNotEmpty) {
+      normalized['imageUrl'] = imageUrl;
+    }
+    return normalized;
   }
 
   bool _productMatchesCategory(Map<String, dynamic> product, String category) {
@@ -161,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _bannerSubscription?.cancel();
     _autoSlideTimer?.cancel();
     _pageController.dispose();
     super.dispose();
@@ -526,8 +502,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Product Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _productsFuture,
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _productsStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
@@ -537,7 +513,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final products = snapshot.data ?? <Map<String, dynamic>>[];
+                  final products = snapshot.data?.docs
+                          .map((doc) {
+                            final data = doc.data();
+                            return _withUsableProductImage({
+                              'id': doc.id,
+                              ...data,
+                            });
+                          })
+                          .toList() ??
+                      <Map<String, dynamic>>[];
 
                   final filteredProducts = products.where((product) {
                     final title = product['title']?.toString() ?? '';
@@ -566,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: const Color(0xFF827470),
                           ),
-                        ),
+                        ),
                       ),
                     );
                   }
@@ -584,18 +569,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                   '',
                               title:
                                   filteredProducts[i]['title']?.toString() ??
-                                  'MOOD Piece',
+                                  '',
                               subtitle:
                                   filteredProducts[i]['subtitle']?.toString() ??
                                   filteredProducts[i]['category']?.toString() ??
-                                  'Luxury edit',
+                                  '',
                               price:
                                   filteredProducts[i]['price']?.toString() ??
-                                  'LKR 0',
+                                  '',
                               productId:
                                   filteredProducts[i]['id']?.toString() ??
                                   filteredProducts[i]['title']?.toString() ??
-                                  'mood-piece-$i',
+                                  '',
                               isFavorite: false,
                               theme: theme,
                               context: context,
@@ -615,23 +600,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                       title:
                                           filteredProducts[i + 1]['title']
                                               ?.toString() ??
-                                          'MOOD Piece',
+                                          '',
                                       subtitle:
                                           filteredProducts[i + 1]['subtitle']
                                               ?.toString() ??
                                           filteredProducts[i + 1]['category']
                                               ?.toString() ??
-                                          'Luxury edit',
+                                          '',
                                       price:
                                           filteredProducts[i + 1]['price']
                                               ?.toString() ??
-                                          'LKR 0',
+                                          '',
                                       productId:
                                           filteredProducts[i + 1]['id']
                                               ?.toString() ??
                                           filteredProducts[i + 1]['title']
                                               ?.toString() ??
-                                          'mood-piece-${i + 1}',
+                                          '',
                                       isFavorite: false,
                                       theme: theme,
                                       context: context,
@@ -951,30 +936,30 @@ class _PremiumNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.trim().isEmpty) {
+    final source = imageUrl.trim();
+    if (source.isEmpty) {
       return _fallback();
     }
 
-    return Image.network(
-      imageUrl,
+    if (source.startsWith('assets/')) {
+      return Image.asset(
+        source,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _fallback(),
+      );
+    }
+
+    if (!source.startsWith('http://') &&
+        !source.startsWith('https://') &&
+        !source.startsWith('gs://')) {
+      return _fallback();
+    }
+
+    return FirestoreImage(
+      imageUrl: source,
       fit: fit,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: colorScheme.surfaceContainerLow,
-          child: Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) => _fallback(),
+      backgroundColor: colorScheme.surfaceContainerLow,
+      fallback: _fallback(),
     );
   }
 
