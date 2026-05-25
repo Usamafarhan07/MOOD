@@ -338,6 +338,8 @@ class FirestoreService {
   static const String _notificationsSubcollection = 'notifications';
   static const String _ordersCollection = 'orders';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  static final Map<String, Stream<dynamic>> _streamCache = {};
 
   FirestoreService();
 
@@ -363,7 +365,13 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getHomeBanners() {
     try {
-      return homeBanners.snapshots();
+      const key = 'home_banners';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
+      final stream = homeBanners.snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch home banners: $e');
     }
@@ -391,6 +399,10 @@ class FirestoreService {
     String? category,
   }) {
     try {
+      final key = 'products_${label ?? ""}_${category ?? ""}';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
       Query<Map<String, dynamic>> query = products
           .withConverter<Map<String, dynamic>>(
             fromFirestore: (snap, _) => snap.data() ?? {},
@@ -406,7 +418,9 @@ class FirestoreService {
           query = query.where('category', isEqualTo: category);
         }
       }
-      return query.snapshots();
+      final stream = query.snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch products: $e');
     }
@@ -424,10 +438,16 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getCartStream() {
     try {
-      return _cartCollection
+      final key = 'cart_${_currentUser.uid}';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
+      final stream = _cartCollection
           .orderBy('addedAt', descending: true)
           .limit(100)
           .snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch cart: $e');
     }
@@ -435,10 +455,16 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getWishlistStream() {
     try {
-      return _wishlistCollection
+      final key = 'wishlist_${_currentUser.uid}';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
+      final stream = _wishlistCollection
           .orderBy('addedAt', descending: true)
           .limit(100)
           .snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch wishlist: $e');
     }
@@ -448,7 +474,13 @@ class FirestoreService {
     String key,
   ) {
     try {
-      return _firestore.collection('config').doc(key).snapshots();
+      final cacheKey = 'config_$key';
+      if (_streamCache.containsKey(cacheKey)) {
+        return _streamCache[cacheKey] as Stream<DocumentSnapshot<Map<String, dynamic>>>;
+      }
+      final stream = _firestore.collection('config').doc(key).snapshots();
+      _streamCache[cacheKey] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch app config: $e');
     }
@@ -456,10 +488,16 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream() {
     try {
-      return _notificationsCollection
+      final key = 'notifications_${_currentUser.uid}';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
+      final stream = _notificationsCollection
           .orderBy('createdAt', descending: true)
           .limit(100)
           .snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch notifications: $e');
     }
@@ -675,11 +713,17 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getUserOrdersStream() {
     try {
-      return _firestore
+      final key = 'orders_${_currentUser.uid}';
+      if (_streamCache.containsKey(key)) {
+        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
+      }
+      final stream = _firestore
           .collection(_ordersCollection)
           .where('userId', isEqualTo: _currentUser.uid)
           .limit(100)
           .snapshots();
+      _streamCache[key] = stream;
+      return stream;
     } catch (e) {
       throw Exception('Failed to fetch user orders: $e');
     }
@@ -733,11 +777,17 @@ class FirestoreService {
 
   // --- USER PROFILE METHODS ---
 
-  Future<UserProfile?> getUserProfile() async {
+  static UserProfile? _cachedUserProfile;
+
+  Future<UserProfile?> getUserProfile({bool forceRefresh = false}) async {
     try {
+      if (!forceRefresh && _cachedUserProfile != null) {
+        return _cachedUserProfile;
+      }
       final doc = await usersCollection.doc(_currentUser.uid).get();
       if (doc.exists) {
-        return UserProfile.fromSnapshot(doc);
+        _cachedUserProfile = UserProfile.fromSnapshot(doc);
+        return _cachedUserProfile;
       }
       return null;
     } catch (e) {
@@ -764,6 +814,7 @@ class FirestoreService {
         createdAt: DateTime.now(),
       );
       await usersCollection.doc(uid).set(profile.toMap());
+      _cachedUserProfile = profile;
     } catch (e) {
       throw Exception('Failed to create user profile: $e');
     }
@@ -789,6 +840,7 @@ class FirestoreService {
       await usersCollection
           .doc(_currentUser.uid)
           .set(updates, SetOptions(merge: true));
+      _cachedUserProfile = null; // Invalidate cache so it fetches fresh next time
     } catch (e) {
       throw Exception('Failed to update user profile: $e');
     }
@@ -811,6 +863,8 @@ class FirestoreService {
         'profileImageBase64': base64String,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      
+      _cachedUserProfile = null;
 
       return base64String;
     } catch (e) {
@@ -824,6 +878,8 @@ class FirestoreService {
         'profileImageBase64': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      
+      _cachedUserProfile = null;
     } catch (e) {
       throw Exception('Failed to remove profile image: $e');
     }

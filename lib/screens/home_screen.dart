@@ -26,12 +26,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _autoSlideTimer;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _bannerSubscription;
 
-  late List<Map<String, String>> _bannerItems;
+  static List<Map<String, String>>? _cachedBanners;
+  List<Map<String, String>> _bannerItems = _cachedBanners ?? [];
 
   @override
   void initState() {
     super.initState();
-    _bannerItems = [];
+    _bannerItems = _cachedBanners ?? [];
     _productsStream = _firestoreService.getProducts(category: _selectedCategory);
     _pageController = PageController(initialPage: 0);
     _listenToHomeBanners();
@@ -76,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         setState(() {
           _bannerItems = banners;
+          _HomeScreenState._cachedBanners = banners;
           if (_activePage >= banners.length) {
             _activePage = 0;
           }

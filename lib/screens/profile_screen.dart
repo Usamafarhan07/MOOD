@@ -63,6 +63,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     try {
       var profile = await _firestoreService.getUserProfile();
+      
+      final currentProfile = profile;
+      if (mounted && currentProfile != null) {
+        setState(() {
+          _profile = currentProfile;
+          _isLoading = false;
+          _nameController.text = currentProfile.fullName;
+          _phoneController.text = currentProfile.phone;
+          _addressController.text = currentProfile.address;
+          _emailController.text = currentProfile.email;
+        });
+      }
+
       final currentUser = FirebaseAuth.instance.currentUser;
       final authEmail = currentUser?.email ?? '';
       final authDisplayName = currentUser?.displayName?.trim() ?? '';
@@ -1483,6 +1496,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         fit: BoxFit.cover,
                                         width: 120,
                                         height: 120,
+                                        gaplessPlayback: true,
                                         errorBuilder:
                                             (context, error, stackTrace) =>
                                                 const Icon(

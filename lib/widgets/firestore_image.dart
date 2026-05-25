@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,11 +84,9 @@ void _logImageSelection(
   // );
 }
 
-String _shorten(String value) {
-  final trimmed = value.trim();
-  if (trimmed.length <= 90) return trimmed;
-  return '${trimmed.substring(0, 45)}...${trimmed.substring(trimmed.length - 30)}';
-}
+
+
+final Map<String, String> _gsUrlCache = {};
 
 class FirestoreImage extends StatelessWidget {
   final String imageUrl;
@@ -117,6 +116,9 @@ class FirestoreImage extends StatelessWidget {
     }
 
     if (source.startsWith('gs://')) {
+      if (_gsUrlCache.containsKey(source)) {
+        return _network(_gsUrlCache[source]!);
+      }
       return FutureBuilder<String>(
         future: FirebaseStorage.instance.refFromURL(source).getDownloadURL(),
         builder: (context, snapshot) {
@@ -127,6 +129,7 @@ class FirestoreImage extends StatelessWidget {
           if (downloadUrl == null || downloadUrl.isEmpty) {
             return _fallback(context);
           }
+          _gsUrlCache[source] = downloadUrl;
           return _network(downloadUrl);
         },
       );
@@ -140,14 +143,11 @@ class FirestoreImage extends StatelessWidget {
   }
 
   Widget _network(String source) {
-    return Image.network(
-      source,
+    return CachedNetworkImage(
+      imageUrl: source,
       fit: fit,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return _loading(context);
-      },
-      errorBuilder: (context, error, stackTrace) => _fallback(context),
+      placeholder: (context, url) => _loading(context),
+      errorWidget: (context, url, error) => _fallback(context),
     );
   }
 
