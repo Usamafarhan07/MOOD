@@ -142,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'Mood App',
                     style: GoogleFonts.notoSerif(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       color: colorScheme.primary.withValues(alpha: 0.6),
                     ),
                   ),

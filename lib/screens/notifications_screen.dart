@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -129,7 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     'NOTIFICATION SETTINGS',
                     style: GoogleFonts.notoSerif(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: 2.0,
                       color: colorScheme.primary,
                     ),
@@ -210,7 +211,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   title,
                   style: GoogleFonts.notoSerif(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: colorScheme.primary,
                   ),
                 ),
@@ -631,17 +632,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: SizedBox(
                       width: 64,
                       height: 80,
-                      child: Image.network(
-                        item.imageUrl!,
+                      child: FirestoreImage(
+                        imageUrl: item.imageUrl!,
                         fit: BoxFit.cover,
-                        colorBlendMode: BlendMode.saturation,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: colorScheme.surfaceContainer,
-                          child: Icon(
-                            Icons.image,
-                            color: colorScheme.primary.withValues(alpha: 0.3),
-                          ),
-                        ),
+                        backgroundColor: colorScheme.surfaceContainer,
                       ),
                     ),
                   ),

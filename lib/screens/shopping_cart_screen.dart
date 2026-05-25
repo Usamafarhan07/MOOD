@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class ShoppingCartScreen extends StatefulWidget {
   const ShoppingCartScreen({super.key});
@@ -429,11 +430,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                item.imageUrl,
-                fit: BoxFit.cover,
-                colorBlendMode: BlendMode.multiply,
-              ),
+              child: FirestoreImage(imageUrl: item.imageUrl, fit: BoxFit.cover),
             ),
           ),
           const SizedBox(width: 16),

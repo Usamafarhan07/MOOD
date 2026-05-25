@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +17,13 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
   String _selectedFilter = 'All Items';
   String _searchQuery = '';
   final FirestoreService _firestoreService = FirestoreService();
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +126,16 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                     Expanded(
                       child: TextField(
                         onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
+                          _searchDebounce?.cancel();
+                          _searchDebounce = Timer(
+                            const Duration(milliseconds: 250),
+                            () {
+                              if (!mounted) return;
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          );
                         },
                         decoration: InputDecoration(
                           hintText: 'Search products...',

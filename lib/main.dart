@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mood/router/app_router.dart';
 import 'package:mood/theme/app_theme.dart';
@@ -8,11 +9,12 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(
-    cacheSizeBytes: 10 * 1024 * 1024,
-    persistenceEnabled: false,
+    cacheSizeBytes: 40 * 1024 * 1024,
+    persistenceEnabled: true,
   );
 
   final router = createAppRouter();

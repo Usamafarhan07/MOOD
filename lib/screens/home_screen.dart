@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final PageController _pageController;
   int _activePage = 0;
   Timer? _autoSlideTimer;
+  Timer? _searchDebounce;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _bannerSubscription;
 
   static List<Map<String, String>>? _cachedBanners;
@@ -33,7 +34,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _bannerItems = _cachedBanners ?? [];
-    _productsStream = _firestoreService.getProducts(category: _selectedCategory);
+    _productsStream = _firestoreService.getProducts(
+      category: _selectedCategory,
+      limit: 16,
+    );
     _pageController = PageController(initialPage: 0);
     _listenToHomeBanners();
     _startAutoSlide();
@@ -91,7 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_selectedCategory == category) return;
     setState(() {
       _selectedCategory = category;
-      _productsStream = _firestoreService.getProducts(category: category);
+      _productsStream = _firestoreService.getProducts(
+        category: category,
+        limit: 16,
+      );
     });
   }
 
@@ -140,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _bannerSubscription?.cancel();
     _autoSlideTimer?.cancel();
+    _searchDebounce?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -226,9 +234,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: TextField(
                         onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
+                          _searchDebounce?.cancel();
+                          _searchDebounce = Timer(
+                            const Duration(milliseconds: 250),
+                            () {
+                              if (!mounted) return;
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          );
                         },
                         decoration: InputDecoration(
                           hintText: 'Search products...',
@@ -663,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'The Digital Curator',
                       style: GoogleFonts.notoSerif(
                         fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: colorScheme.primary,
                       ),
                     ),

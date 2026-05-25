@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key, required this.orderId});
@@ -126,7 +127,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   'Delivery Tracker',
                   style: GoogleFonts.notoSerif(
                     fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: primaryTextColor,
                   ),
                 ),
@@ -373,7 +374,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   'MOOD Concierge',
                   style: GoogleFonts.notoSerif(
                     fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     color: primaryTextColor,
                   ),
                 ),
@@ -579,7 +580,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               title: Text(
                 'MOOD',
                 style: GoogleFonts.notoSerif(
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: 6.0,
                   fontSize: 22,
                   color: primaryTextColor,
@@ -618,7 +619,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       '#${order.orderId.toUpperCase()}',
                       style: GoogleFonts.notoSerif(
                         fontSize: 26,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: primaryTextColor,
                         letterSpacing: -0.5,
                       ),
@@ -697,7 +698,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                         fullName,
                         style: GoogleFonts.notoSerif(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           color: primaryTextColor,
                         ),
                       ),
@@ -892,23 +893,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                     ),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
-                                      child: Image.network(
-                                        item.imageUrl,
+                                      child: FirestoreImage(
+                                        imageUrl: item.imageUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                color: surfaceContainerColor,
-                                                child: Center(
-                                                  child: Icon(
-                                                    Icons.image_outlined,
-                                                    color: primaryTextColor
-                                                        .withValues(alpha: 0.3),
-                                                    size: 32,
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                        backgroundColor: surfaceContainerColor,
                                       ),
                                     ),
                                   ),
@@ -929,7 +917,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                         item.title,
                                         style: GoogleFonts.notoSerif(
                                           fontSize: 20,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w600,
                                           color: primaryTextColor,
                                           height: 1.3,
                                         ),
@@ -1117,7 +1105,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             'TOTAL',
                             style: GoogleFonts.notoSerif(
                               fontSize: 16,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w600,
                               color: primaryTextColor,
                             ),
                           ),
@@ -1125,7 +1113,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             formatCurrency(order.totalPrice),
                             style: GoogleFonts.notoSerif(
                               fontSize: 20,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w600,
                               color: primaryTextColor,
                             ),
                           ),

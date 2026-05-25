@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -767,7 +768,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(imageUrl, fit: BoxFit.cover),
+            child: FirestoreImage(imageUrl: imageUrl, fit: BoxFit.cover),
           ),
         ),
         const SizedBox(width: 16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class OrderConfirmationScreen extends StatefulWidget {
   const OrderConfirmationScreen({super.key, required this.orderId});
@@ -361,7 +362,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.network(imageUrl, fit: BoxFit.cover),
+        child: FirestoreImage(imageUrl: imageUrl, fit: BoxFit.cover),
       ),
     );
   }

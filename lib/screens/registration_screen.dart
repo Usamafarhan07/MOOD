@@ -180,7 +180,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       'MOOD',
                       style: GoogleFonts.notoSerif(
                         fontSize: 32,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 6.0,
                         color: colorScheme.primary,
                       ),
@@ -192,7 +192,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       'WELCOME TO MOOD',
                       style: GoogleFonts.notoSerif(
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 3.6,
                         color: colorScheme.primary.withValues(alpha: 0.6),
                       ),
@@ -202,7 +202,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       'Create Account',
                       style: GoogleFonts.notoSerif(
                         fontSize: 36,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: -0.5,
                         color: colorScheme.primary,
                       ),

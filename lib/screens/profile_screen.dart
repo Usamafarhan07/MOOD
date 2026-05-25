@@ -8,15 +8,30 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
+import 'package:provider/provider.dart';
+import 'package:mood/providers/profile_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ProfileProvider(),
+      child: const ProfileScreenView(),
+    );
+  }
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenView extends StatefulWidget {
+  const ProfileScreenView({super.key});
+
+  @override
+  State<ProfileScreenView> createState() => _ProfileScreenViewState();
+}
+
+class _ProfileScreenViewState extends State<ProfileScreenView> {
   final FirestoreService _firestoreService = FirestoreService();
   UserProfile? _profile;
   bool _isLoading = true;
@@ -64,18 +79,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       var profile = await _firestoreService.getUserProfile();
       
-      final currentProfile = profile;
-      if (mounted && currentProfile != null) {
-        setState(() {
-          _profile = currentProfile;
-          _isLoading = false;
-          _nameController.text = currentProfile.fullName;
-          _phoneController.text = currentProfile.phone;
-          _addressController.text = currentProfile.address;
-          _emailController.text = currentProfile.email;
-        });
-      }
-
       final currentUser = FirebaseAuth.instance.currentUser;
       final authEmail = currentUser?.email ?? '';
       final authDisplayName = currentUser?.displayName?.trim() ?? '';
@@ -116,40 +119,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             email: repairedEmail,
             phone: profile.phone,
             address: profile.address,
+            profileImageUrl: profile.profileImageUrl,
             profileImageBase64: profile.profileImageBase64,
             paymentMethod: profile.paymentMethod,
             createdAt: profile.createdAt,
             ordersCount: profile.ordersCount,
             points: profile.points,
-          );
-        }
-
-        // MIGRATION: Dynamically compute actual orders and points
-        final ordersSnapshot = await FirebaseFirestore.instance
-            .collection('orders')
-            .where('userId', isEqualTo: profile.uid)
-            .get();
-
-        int actualOrders = ordersSnapshot.size;
-        int totalSpent = 0;
-        for (var doc in ordersSnapshot.docs) {
-          totalSpent += (doc.data()['totalPrice'] as num?)?.toInt() ?? 0;
-        }
-        int actualPoints = totalSpent ~/ 100; // 1 point per 100 LKR spent
-
-        if (profile.ordersCount != actualOrders ||
-            profile.points != actualPoints) {
-          profile = UserProfile(
-            uid: profile.uid,
-            fullName: profile.fullName,
-            email: profile.email,
-            phone: profile.phone,
-            address: profile.address,
-            profileImageBase64: profile.profileImageBase64,
-            paymentMethod: profile.paymentMethod,
-            createdAt: profile.createdAt,
-            ordersCount: actualOrders,
-            points: actualPoints,
           );
         }
       }
@@ -170,12 +145,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             email: authEmail,
             phone: profile.phone,
             address: profile.address,
+            profileImageUrl: profile.profileImageUrl,
             profileImageBase64: profile.profileImageBase64,
             paymentMethod: profile.paymentMethod,
             createdAt: profile.createdAt,
             ordersCount: profile.ordersCount,
             points: profile.points,
           );
+        }
+
+        if (profile != null && (profile.ordersCount == 0 && profile.points == 0)) {
+           profile = await _syncHistoricalOrdersAndPoints(profile);
         }
 
         setState(() {
@@ -216,6 +196,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<UserProfile?> _syncHistoricalOrdersAndPoints(UserProfile? currentProfile) async {
+    if (currentProfile == null) return null;
+
+    // Only run migration if the user has 0 points/orders to avoid unnecessary queries
+    if (currentProfile.ordersCount > 0 || currentProfile.points > 0) return currentProfile;
+
+    try {
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: currentProfile.uid)
+          .get();
+
+      if (ordersSnapshot.docs.isEmpty) return currentProfile;
+
+      int actualOrders = ordersSnapshot.size;
+      int totalSpent = 0;
+      for (var doc in ordersSnapshot.docs) {
+        totalSpent += (doc.data()['totalPrice'] as num?)?.toInt() ?? 0;
+      }
+      int actualPoints = totalSpent ~/ 100;
+
+      if (actualOrders > 0 || actualPoints > 0) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentProfile.uid)
+            .update({
+          'ordersCount': actualOrders,
+          'points': actualPoints,
+        });
+
+        return UserProfile(
+          uid: currentProfile.uid,
+          fullName: currentProfile.fullName,
+          email: currentProfile.email,
+          phone: currentProfile.phone,
+          address: currentProfile.address,
+          profileImageUrl: currentProfile.profileImageUrl,
+          profileImageBase64: currentProfile.profileImageBase64,
+          paymentMethod: currentProfile.paymentMethod,
+          createdAt: currentProfile.createdAt,
+          ordersCount: actualOrders,
+          points: actualPoints,
+        );
+      }
+    } catch (e) {
+      // Ignore background sync errors
+    }
+    return currentProfile;
+  }
+
   String _nameFromAuth({required String displayName, required String email}) {
     if (displayName.trim().isNotEmpty) return displayName.trim();
     if (email.trim().isEmpty) return 'User Name';
@@ -240,8 +270,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showProfilePhotoOptions() {
     final hasPhoto =
-        _profile?.profileImageBase64 != null &&
-        _profile!.profileImageBase64!.isNotEmpty;
+        (_profile?.profileImageUrl != null && _profile!.profileImageUrl!.isNotEmpty) ||
+        (_profile?.profileImageBase64 != null && _profile!.profileImageBase64!.isNotEmpty);
 
     showModalBottomSheet(
       context: context,
@@ -264,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Profile Photo',
                   style: GoogleFonts.notoSerif(
                     fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: colorScheme.primary,
                   ),
                 ),
@@ -310,66 +340,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    try {
-      final pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 600,
-        maxHeight: 600,
-        imageQuality: 80,
-      );
+    final provider = context.read<ProfileProvider>();
+    setState(() => _isUploading = true);
 
-      if (pickedFile == null) return;
+    await provider.uploadProfileImage(source);
 
-      final fileSize = await pickedFile.length();
-      const maxSize = 1024 * 1024; // 1MB
-
-      if (fileSize > maxSize) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Image size must be less than 1MB for database storage',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      setState(() => _isUploading = true);
-      final bytes = await pickedFile.readAsBytes();
-      final base64String = await _firestoreService.uploadProfileImageBase64(
-        bytes,
-      );
-
+    if (provider.errorMessage != null) {
       if (mounted) {
-        setState(() {
-          _profile = UserProfile(
-            uid: _profile!.uid,
-            fullName: _profile!.fullName,
-            email: _profile!.email,
-            phone: _profile!.phone,
-            address: _profile!.address,
-            profileImageBase64: base64String,
-            paymentMethod: _profile!.paymentMethod,
-            createdAt: _profile!.createdAt,
-            ordersCount: _profile!.ordersCount,
-            points: _profile!.points,
-          );
-          _isUploading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(provider.errorMessage!)),
+        );
+      }
+      provider.clearError();
+    } else {
+      await _loadProfile();
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile image updated successfully')),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isUploading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload image: ${e.toString()}')),
-        );
-      }
+    }
+
+    if (mounted) {
+      setState(() => _isUploading = false);
     }
   }
 
@@ -455,7 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Edit Profile',
                       style: GoogleFonts.notoSerif(
                         fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: theme.colorScheme.primary,
                       ),
                     ),
@@ -550,6 +543,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   email: _profile!.email,
                                   phone: _phoneController.text.trim(),
                                   address: _addressController.text.trim(),
+                                  profileImageUrl: _profile!.profileImageUrl,
                                   profileImageBase64:
                                       _profile!.profileImageBase64,
                                   paymentMethod: _profile!.paymentMethod,
@@ -720,7 +714,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             'Change Email & Password',
                             style: GoogleFonts.notoSerif(
                               fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: theme.colorScheme.primary,
                             ),
                           ),
@@ -873,6 +867,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   email: previousEmail,
                                   phone: _profile!.phone,
                                   address: _profile!.address,
+                                  profileImageUrl: _profile!.profileImageUrl,
                                   profileImageBase64:
                                       _profile!.profileImageBase64,
                                   paymentMethod: _profile!.paymentMethod,
@@ -1058,7 +1053,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Payment Method',
                       style: GoogleFonts.notoSerif(
                         fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: colorScheme.primary,
                       ),
                     ),
@@ -1282,6 +1277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               email: _profile!.email,
                               phone: _profile!.phone,
                               address: _profile!.address,
+                              profileImageUrl: _profile!.profileImageUrl,
                               profileImageBase64: _profile!.profileImageBase64,
                               paymentMethod: {
                                 'brand': 'Visa',
@@ -1337,6 +1333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 email: _profile!.email,
                                 phone: _profile!.phone,
                                 address: _profile!.address,
+                                profileImageUrl: _profile!.profileImageUrl,
                                 profileImageBase64:
                                     _profile!.profileImageBase64,
                                 createdAt: _profile!.createdAt,
@@ -1486,35 +1483,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Stack(
                             children: [
                               ClipOval(
-                                child:
-                                    _profile?.profileImageBase64 != null &&
-                                        _profile!.profileImageBase64!.isNotEmpty
-                                    ? Image.memory(
-                                        base64Decode(
-                                          _profile!.profileImageBase64!,
-                                        ),
-                                        fit: BoxFit.cover,
+                                child: _profile?.profileImageUrl != null &&
+                                        _profile!.profileImageUrl!.isNotEmpty
+                                    ? SizedBox(
                                         width: 120,
                                         height: 120,
-                                        gaplessPlayback: true,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                const Icon(
-                                                  Icons.person,
-                                                  size: 60,
-                                                  color: Colors.grey,
-                                                ),
+                                        child: FirestoreImage(
+                                          imageUrl: _profile!.profileImageUrl!,
+                                          fit: BoxFit.cover,
+                                          fallback: const Icon(
+                                            Icons.person,
+                                            size: 60,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
                                       )
-                                    : Container(
-                                        width: 120,
-                                        height: 120,
-                                        color: Colors.grey[200],
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 60,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
+                                    : _profile?.profileImageBase64 != null &&
+                                            _profile!.profileImageBase64!
+                                                .isNotEmpty
+                                        ? Image.memory(
+                                            base64Decode(
+                                              _profile!.profileImageBase64!,
+                                            ),
+                                            fit: BoxFit.cover,
+                                            width: 120,
+                                            height: 120,
+                                            gaplessPlayback: true,
+                                            errorBuilder: (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) =>
+                                                const Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Colors.grey,
+                                            ),
+                                          )
+                                        : Container(
+                                            width: 120,
+                                            height: 120,
+                                            color: Colors.grey[200],
+                                            child: const Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                               ),
                               if (_isUploading)
                                 const Center(
@@ -1609,7 +1624,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _profile?.ordersCount.toString() ?? '0',
                                 style: GoogleFonts.notoSerif(
                                   fontSize: 28,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   color: colorScheme.primary,
                                 ),
                               ),
@@ -1645,7 +1660,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _profile?.points.toString() ?? '0',
                                 style: GoogleFonts.notoSerif(
                                   fontSize: 28,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                   color: colorScheme.primary,
                                 ),
                               ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:mood/services/firestore_service.dart';
+import 'package:mood/widgets/firestore_image.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -276,8 +277,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    item.imageUrl,
+                  child: FirestoreImage(
+                    imageUrl: item.imageUrl,
                     fit: BoxFit.cover,
                   ),
                 ),

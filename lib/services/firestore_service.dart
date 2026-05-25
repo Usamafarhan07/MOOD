@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:mood/widgets/firestore_image.dart';
-
-import 'dart:convert';
 
 int parsePriceValue(dynamic value) {
   if (value is num) return value.toInt();
@@ -277,6 +274,7 @@ class UserProfile {
   final String phone;
   final String address;
   final String? profileImageBase64;
+  final String? profileImageUrl;
   final Map<String, dynamic>? paymentMethod;
   final DateTime createdAt;
   final int ordersCount;
@@ -289,6 +287,7 @@ class UserProfile {
     required this.phone,
     required this.address,
     this.profileImageBase64,
+    this.profileImageUrl,
     this.paymentMethod,
     required this.createdAt,
     this.ordersCount = 0,
@@ -306,6 +305,7 @@ class UserProfile {
       phone: data['phone'] as String? ?? '',
       address: data['address'] as String? ?? '',
       profileImageBase64: data['profileImageBase64'] as String?,
+      profileImageUrl: data['profileImageUrl'] as String?,
       paymentMethod: data['paymentMethod'] as Map<String, dynamic>?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       ordersCount: (data['ordersCount'] as num?)?.toInt() ?? 0,
@@ -321,6 +321,7 @@ class UserProfile {
       'phone': phone,
       'address': address,
       'profileImageBase64': profileImageBase64,
+      'profileImageUrl': profileImageUrl,
       'paymentMethod': paymentMethod,
       'createdAt': Timestamp.fromDate(createdAt),
       'ordersCount': ordersCount,
@@ -338,8 +339,6 @@ class FirestoreService {
   static const String _notificationsSubcollection = 'notifications';
   static const String _ordersCollection = 'orders';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
-  static final Map<String, Stream<dynamic>> _streamCache = {};
 
   FirestoreService();
 
@@ -365,13 +364,7 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getHomeBanners() {
     try {
-      const key = 'home_banners';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
-      final stream = homeBanners.snapshots();
-      _streamCache[key] = stream;
-      return stream;
+      return homeBanners.snapshots();
     } catch (e) {
       throw Exception('Failed to fetch home banners: $e');
     }
@@ -397,12 +390,9 @@ class FirestoreService {
   Stream<QuerySnapshot<Map<String, dynamic>>> getProducts({
     String? label,
     String? category,
+    int? limit,
   }) {
     try {
-      final key = 'products_${label ?? ""}_${category ?? ""}';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
       Query<Map<String, dynamic>> query = products
           .withConverter<Map<String, dynamic>>(
             fromFirestore: (snap, _) => snap.data() ?? {},
@@ -418,9 +408,10 @@ class FirestoreService {
           query = query.where('category', isEqualTo: category);
         }
       }
-      final stream = query.snapshots();
-      _streamCache[key] = stream;
-      return stream;
+      if (limit != null && limit > 0) {
+        query = query.limit(limit);
+      }
+      return query.snapshots();
     } catch (e) {
       throw Exception('Failed to fetch products: $e');
     }
@@ -438,16 +429,10 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getCartStream() {
     try {
-      final key = 'cart_${_currentUser.uid}';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
-      final stream = _cartCollection
+      return _cartCollection
           .orderBy('addedAt', descending: true)
           .limit(100)
           .snapshots();
-      _streamCache[key] = stream;
-      return stream;
     } catch (e) {
       throw Exception('Failed to fetch cart: $e');
     }
@@ -455,16 +440,10 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getWishlistStream() {
     try {
-      final key = 'wishlist_${_currentUser.uid}';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
-      final stream = _wishlistCollection
+      return _wishlistCollection
           .orderBy('addedAt', descending: true)
           .limit(100)
           .snapshots();
-      _streamCache[key] = stream;
-      return stream;
     } catch (e) {
       throw Exception('Failed to fetch wishlist: $e');
     }
@@ -474,13 +453,7 @@ class FirestoreService {
     String key,
   ) {
     try {
-      final cacheKey = 'config_$key';
-      if (_streamCache.containsKey(cacheKey)) {
-        return _streamCache[cacheKey] as Stream<DocumentSnapshot<Map<String, dynamic>>>;
-      }
-      final stream = _firestore.collection('config').doc(key).snapshots();
-      _streamCache[cacheKey] = stream;
-      return stream;
+      return _firestore.collection('config').doc(key).snapshots();
     } catch (e) {
       throw Exception('Failed to fetch app config: $e');
     }
@@ -488,16 +461,10 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getNotificationsStream() {
     try {
-      final key = 'notifications_${_currentUser.uid}';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
-      final stream = _notificationsCollection
+      return _notificationsCollection
           .orderBy('createdAt', descending: true)
           .limit(100)
           .snapshots();
-      _streamCache[key] = stream;
-      return stream;
     } catch (e) {
       throw Exception('Failed to fetch notifications: $e');
     }
@@ -697,12 +664,19 @@ class FirestoreService {
     try {
       final orderRef = _firestore.collection(_ordersCollection).doc();
       final cartDocs = await _cartCollection.get();
+      final userRef = _firestore.collection(_usersCollection).doc(_currentUser.uid);
       final batch = _firestore.batch();
 
       batch.set(orderRef, order.toMap());
       for (final doc in cartDocs.docs) {
         batch.delete(doc.reference);
       }
+
+      final addedPoints = order.totalPrice ~/ 100;
+      batch.update(userRef, {
+        'ordersCount': FieldValue.increment(1),
+        'points': FieldValue.increment(addedPoints),
+      });
 
       await batch.commit();
       return orderRef.id;
@@ -713,17 +687,11 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getUserOrdersStream() {
     try {
-      final key = 'orders_${_currentUser.uid}';
-      if (_streamCache.containsKey(key)) {
-        return _streamCache[key] as Stream<QuerySnapshot<Map<String, dynamic>>>;
-      }
-      final stream = _firestore
+      return _firestore
           .collection(_ordersCollection)
           .where('userId', isEqualTo: _currentUser.uid)
           .limit(100)
           .snapshots();
-      _streamCache[key] = stream;
-      return stream;
     } catch (e) {
       throw Exception('Failed to fetch user orders: $e');
     }
@@ -846,21 +814,17 @@ class FirestoreService {
     }
   }
 
-  Future<String> uploadProfileImageBase64(Uint8List imageBytes) async {
+  Future<String> uploadProfileImageBase64(String base64String) async {
     try {
-      final fileSize = imageBytes.length;
-      // Even compressed, base64 inflates by ~33%. Allow 1MB limit for safety in Firestore
-      const maxSize = 1024 * 1024; // 1MB
-      if (fileSize > maxSize) {
-        throw ArgumentError(
-          'Image size exceeds 1MB limit for Firestore Base64',
-        );
+      // Firestore document size limit is 1MB (~1,048,576 bytes)
+      // We check if the base64 string is too large to fit.
+      if (base64String.length > 1000000) {
+        throw ArgumentError('Image is too large to store in Firestore. Please select a smaller image.');
       }
-
-      final base64String = base64Encode(imageBytes);
 
       await usersCollection.doc(_currentUser.uid).set({
         'profileImageBase64': base64String,
+        'profileImageUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
@@ -876,6 +840,7 @@ class FirestoreService {
     try {
       await usersCollection.doc(_currentUser.uid).set({
         'profileImageBase64': FieldValue.delete(),
+        'profileImageUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
